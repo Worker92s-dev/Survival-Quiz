@@ -181,6 +181,9 @@
         <button type="submit" class="w-full py-4 rounded-xl font-display font-black text-lg bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 hover:to-yellow-300 text-black shadow-lg shadow-amber-500/20 active:scale-[0.98] transition">
           เข้าสู่ห้องสอบชิงชีวิต <i class="fa-solid fa-arrow-right ml-1"></i>
         </button>
+        <button type="button" onclick="openHowToModal()" class="w-full py-3 rounded-xl font-bold text-sm bg-arena-800 border border-arena-600 text-amber-300 hover:bg-arena-700">
+          📖 วิธีเล่น (อ่านก่อนเริ่ม)
+        </button>
       </form>
     </div>
 
@@ -217,6 +220,7 @@
         </div>
         <h3 id="p-waiting-title" class="text-xl font-bold font-display text-white">รอสัญญาณเริ่มคำถาม</h3>
         <p id="p-waiting-sub" class="text-xs text-gray-400 mt-2">โปรดจับตาดูหน้าจอโปรเจกเตอร์ส่วนกลาง เจ้าหน้าที่กำลังควบคุมเกม</p>
+        <button type="button" onclick="openHowToModal()" class="mt-4 px-4 py-2 rounded-xl text-xs font-bold bg-arena-800 border border-arena-600 text-amber-300 hover:bg-arena-700">📖 วิธีเล่น</button>
       </div>
 
       <!-- Player Question & Choices -->
@@ -358,6 +362,15 @@
         <div class="mt-8 text-sm text-gray-400 animate-pulse">
           <i class="fa-solid fa-spinner fa-spin mr-2"></i> รอเจ้าหน้าที่เปิดสัญญาณเริ่มคำถามรอบแรก...
         </div>
+      </div>
+
+      <!-- Stage State: HOW TO PLAY (แอดมินเลือกแสดงเองจากแผงควบคุม / กดเลข 5) -->
+      <div id="proj-stage-howto" class="hidden flex-1 bg-arena-900/90 border border-arena-700/80 rounded-3xl p-6 md:p-10 box-glow">
+        <div class="text-center mb-6">
+          <div class="text-amber-400 text-sm font-bold tracking-widest">HOW TO PLAY</div>
+          <h2 class="text-4xl md:text-6xl font-black font-display text-white">วิธีเล่น <span class="text-amber-400 text-glow-gold">SURVIVAL QUIZ</span></h2>
+        </div>
+        <div id="proj-howto-body"></div>
       </div>
 
       <!-- Stage State: QUESTION ACTIVE -->
@@ -507,9 +520,6 @@
         <button onclick="adminResetGame()" class="px-4 py-2 rounded-xl text-xs font-bold bg-red-950 border border-red-700 text-red-300 hover:bg-red-900 transition">
           <i class="fa-solid fa-rotate-left mr-1"></i> รีเซ็ตเกมใหม่
         </button>
-        <button onclick="adminSimulatePlayers(200)" class="px-4 py-2 rounded-xl text-xs font-bold bg-purple-900/80 border border-purple-600 text-purple-200 hover:bg-purple-800 transition">
-          <i class="fa-solid fa-robot mr-1"></i> จำลอง 200 บอท (Stress Test)
-        </button>
       </div>
     </div>
 
@@ -590,12 +600,13 @@
             <button onclick="openProjectorWindow()" class="px-2.5 py-1 rounded-lg bg-arena-800 text-gray-300 border border-arena-600 text-[11px] hover:bg-arena-700">หน้าต่างแยก (2 จอ)</button>
           </span>
         </div>
-        <div class="grid grid-cols-3 sm:grid-cols-5 gap-2 text-xs">
+        <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 text-xs">
           <button data-proj="AUTO" onclick="adminSetProjectorScreen('AUTO')" class="adm-proj-btn px-2 py-2 rounded-lg border font-bold transition">🔄 อัตโนมัติ</button>
           <button data-proj="LOBBY" onclick="adminSetProjectorScreen('LOBBY')" class="adm-proj-btn px-2 py-2 rounded-lg border font-bold transition">Lobby</button>
           <button data-proj="QUESTION" onclick="adminSetProjectorScreen('QUESTION')" class="adm-proj-btn px-2 py-2 rounded-lg border font-bold transition">คำถาม</button>
           <button data-proj="REVEAL" onclick="adminSetProjectorScreen('REVEAL')" class="adm-proj-btn px-2 py-2 rounded-lg border font-bold transition">เฉลย</button>
           <button data-proj="RANKING" onclick="adminSetProjectorScreen('RANKING')" class="adm-proj-btn px-2 py-2 rounded-lg border font-bold transition">อันดับ</button>
+          <button data-proj="HOWTO" onclick="adminSetProjectorScreen('HOWTO')" class="adm-proj-btn px-2 py-2 rounded-lg border font-bold transition">📖 วิธีเล่น</button>
         </div>
         <p class="text-[11px] text-gray-500 mt-2">เลือกหน้าอื่นนอกจาก "อัตโนมัติ" = ล็อกหน้าจอ ไม่เปลี่ยนตามปุ่มขั้นตอน (ผู้เล่นยังเล่นตามสถานะเกมปกติ) กด "อัตโนมัติ" เพื่อกลับไปตามสถานะเกม</p>
       </div>
@@ -1243,6 +1254,49 @@
         navigator.clipboard.writeText(url).then(done).catch(() => { const i = document.getElementById('adm-room-url'); i.select(); document.execCommand('copy'); done(); });
       } else { const i = document.getElementById('adm-room-url'); i.select(); document.execCommand('copy'); done(); }
     }
+    // =========================================================================
+    // HOW TO PLAY (ใช้ทั้งบนโปรเจกเตอร์และบนมือถือผู้เล่น)
+    // =========================================================================
+    const HOWTO_STEPS = [
+      { icon: '📱', title: 'สแกน QR แล้วใส่ชื่อ', text: 'ใช้มือถือสแกน QR Code ใส่ชื่อเล่นหรือรหัสนักเรียน แล้วรอครูเริ่มเกม' },
+      { icon: '❤️❤️', title: 'ทุกคนมี 2 หัวใจ', text: 'หัวใจคือชีวิตของเรา พยายามรักษาไว้ให้นานที่สุด' },
+      { icon: '⏱️', title: 'อ่านคำถาม แล้วเลือก A B C D', text: 'ตอบให้ทันก่อนเวลาหมด <b class="text-amber-400">เลือกแล้วเปลี่ยนไม่ได้!</b> คิดให้ดีก่อนกด' },
+      { icon: '✅', title: 'ตอบถูก = รอด + ได้คะแนน', text: 'ตอบถูกได้ 1,000 คะแนน และ <b class="text-amber-400">ตอบไวยิ่งได้โบนัสเพิ่ม</b>' },
+      { icon: '💔', title: 'ตอบผิด หรือไม่ตอบ = เสีย 1 หัวใจ', text: 'หัวใจหมดทั้ง 2 ดวงคือ <b class="text-red-400">ตกรอบ</b> ตอบไม่ได้แล้ว แต่ยังนั่งดูเกมต่อได้' },
+      { icon: '🏆', title: 'คนที่รอดจนท้ายสุด ชนะ!', text: 'จัดอันดับ: หัวใจเหลือมากที่สุด → คะแนนมากที่สุด → ใช้เวลารวมน้อยที่สุด' }
+    ];
+
+    function howToHtml(big) {
+      const n = GameData.questions.length;
+      const cards = HOWTO_STEPS.map((s, i) =>
+        '<div class="flex items-start gap-4 bg-arena-950/70 border border-arena-800 rounded-2xl ' + (big ? 'p-5' : 'p-3') + '">' +
+          '<div class="shrink-0 text-center ' + (big ? 'text-5xl w-20' : 'text-3xl w-12') + '">' + s.icon + '</div>' +
+          '<div>' +
+            '<div class="font-display font-black text-amber-400 ' + (big ? 'text-2xl md:text-3xl' : 'text-base') + '">' + (i + 1) + '. ' + s.title + '</div>' +
+            '<div class="text-gray-200 mt-1 ' + (big ? 'text-lg md:text-2xl' : 'text-sm') + '">' + s.text + '</div>' +
+          '</div>' +
+        '</div>'
+      ).join('');
+      const tips = '<div class="text-center text-gray-400 ' + (big ? 'text-lg md:text-xl mt-5' : 'text-xs mt-4') + '">' +
+        '💡 มีทั้งหมด ' + n + ' ข้อ • หลังเฉลยจะมีคำอธิบายให้เรียนรู้ • อย่าปิดหน้าจอมือถือ และไม่ต้องรีเฟรช</div>';
+      return '<div class="grid ' + (big ? 'md:grid-cols-2' : '') + ' gap-3">' + cards + '</div>' + tips;
+    }
+
+    function closeHowToModal() { const o = document.getElementById('howto-modal'); if (o) o.remove(); }
+    function openHowToModal() {
+      if (document.getElementById('howto-modal')) return;
+      const o = document.createElement('div');
+      o.id = 'howto-modal';
+      o.style.cssText = 'position:fixed;inset:0;z-index:150;background:rgba(6,9,19,.97);overflow:auto;padding:16px;';
+      o.innerHTML = '<div style="max-width:560px;margin:0 auto;padding-bottom:24px">' +
+        '<div class="text-center mb-4"><div class="text-amber-400 text-xs font-bold tracking-widest">HOW TO PLAY</div>' +
+        '<h2 class="text-2xl font-black font-display text-white">วิธีเล่น</h2></div>' +
+        howToHtml(false) +
+        '<button onclick="closeHowToModal()" class="w-full mt-5 py-3 rounded-xl font-display font-black bg-amber-500 text-black">เข้าใจแล้ว ปิด</button></div>';
+      document.body.appendChild(o);
+    }
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeHowToModal(); });
+
     // คลิก QR เพื่อขยายเต็มจอ (คลิกที่ใดก็ได้หรือกด Esc เพื่อปิด)
     function closeQrOverlay() {
       const o = document.getElementById('qr-overlay');
@@ -1377,7 +1431,7 @@
       const tag = (e.target && e.target.tagName) || '';
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       const k = e.key.toLowerCase();
-      const screens = { '0': 'AUTO', '1': 'LOBBY', '2': 'QUESTION', '3': 'REVEAL', '4': 'RANKING' };
+      const screens = { '0': 'AUTO', '1': 'LOBBY', '2': 'QUESTION', '3': 'REVEAL', '4': 'RANKING', '5': 'HOWTO' };
       if (k === ' ' || k === 'enter' || k === 'arrowright') { e.preventDefault(); hostAdvance(); }
       else if (screens[k]) { adminSetProjectorScreen(screens[k]); }
       else if (k === 'h') { hudPinned = !hudPinned; setHud(hudPinned); }
@@ -1649,7 +1703,8 @@
         LOBBY: document.getElementById('proj-stage-lobby'),
         QUESTION: document.getElementById('proj-stage-question'),
         REVEAL: document.getElementById('proj-stage-reveal'),
-        RANKING: document.getElementById('proj-stage-ranking')
+        RANKING: document.getElementById('proj-stage-ranking'),
+        HOWTO: document.getElementById('proj-stage-howto')
       };
       Object.keys(stages).forEach(k => stages[k].classList.toggle('hidden', k !== stage));
 
@@ -1680,6 +1735,10 @@
         document.getElementById('proj-round-new-eliminated-cnt').innerText = GameData.roundStats.eliminated;
       } else if (stage === 'RANKING') {
         renderLeaderboardTable();
+      } else if (stage === 'HOWTO') {
+        const el = document.getElementById('proj-howto-body');
+        const html = howToHtml(true);
+        if (el.dataset.h !== html) { el.innerHTML = html; el.dataset.h = html; }
       }
     }
 
@@ -1687,7 +1746,7 @@
     function adminSetProjectorScreen(mode) {
       GameData.projectorScreen = mode;
       broadcastState();
-      const names = { AUTO: 'อัตโนมัติ (ตามสถานะเกม)', LOBBY: 'Lobby', QUESTION: 'คำถาม', REVEAL: 'เฉลย', RANKING: 'อันดับ' };
+      const names = { AUTO: 'อัตโนมัติ (ตามสถานะเกม)', LOBBY: 'Lobby', QUESTION: 'คำถาม', REVEAL: 'เฉลย', RANKING: 'อันดับ', HOWTO: 'วิธีเล่น' };
       showToast('โปรเจกเตอร์: ' + names[mode]);
     }
 
@@ -2302,9 +2361,10 @@
         <option value="QUESTION">หน้าจอ: คำถาม</option>
         <option value="REVEAL">หน้าจอ: เฉลย</option>
         <option value="RANKING">หน้าจอ: อันดับ</option>
+        <option value="HOWTO">หน้าจอ: วิธีเล่น</option>
       </select>
       <button onclick="switchView('admin')" class="px-3 py-2 rounded-lg bg-amber-500 text-black font-bold hover:bg-amber-400">⚙ แอดมิน</button>
-      <span class="w-full text-center text-[10px] text-gray-500">คีย์ลัด: Space/Enter = ขั้นถัดไป • 0-4 = เลือกหน้าจอ • H = ปักแถบ • F = เต็มจอ</span>
+      <span class="w-full text-center text-[10px] text-gray-500">คีย์ลัด: Space/Enter = ขั้นถัดไป • 0-5 = เลือกหน้าจอ (5 = วิธีเล่น) • H = ปักแถบ • F = เต็มจอ</span>
     </div>
   </div>
 </body>
