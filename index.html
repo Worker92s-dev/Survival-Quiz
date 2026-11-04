@@ -646,6 +646,30 @@
       </div>
     </div>
 
+    <!-- Music control (เพลงประกอบ) -->
+    <div class="bg-arena-900/90 border border-arena-700/80 rounded-2xl p-4 md:p-6">
+      <h3 class="text-sm font-bold text-gray-300 uppercase tracking-wider mb-1 flex items-center gap-2">
+        <i class="fa-solid fa-music text-amber-400"></i> เพลงประกอบเกม
+      </h3>
+      <p class="text-[11px] text-gray-500 mb-4">เพลงจะดังที่เครื่องที่เปิด "หน้าโปรเจกเตอร์" (หรือโหมดเวที) — คลิกหน้าจอนั้น 1 ครั้งเพื่อปลดล็อกเสียงของเบราว์เซอร์</p>
+      <div class="flex flex-wrap items-center gap-3 text-xs">
+        <button id="adm-music-toggle" onclick="adminMusicToggle()" class="px-4 py-2 rounded-xl border font-bold transition"></button>
+        <div class="flex flex-wrap gap-2">
+          <button data-mode="auto" onclick="adminMusicSet({mode:'auto'})" class="adm-music-mode px-3 py-2 rounded-lg border font-bold transition">🔄 อัตโนมัติตามเกม</button>
+          <button data-mode="lobby" onclick="adminMusicSet({mode:'lobby'})" class="adm-music-mode px-3 py-2 rounded-lg border font-bold transition">ลอบบี้</button>
+          <button data-mode="question" onclick="adminMusicSet({mode:'question'})" class="adm-music-mode px-3 py-2 rounded-lg border font-bold transition">จับเวลาตอบ</button>
+          <button data-mode="ranking" onclick="adminMusicSet({mode:'ranking'})" class="adm-music-mode px-3 py-2 rounded-lg border font-bold transition">อันดับ</button>
+        </div>
+        <label class="flex items-center gap-2 text-gray-400">
+          <i class="fa-solid fa-volume-low"></i>
+          <input id="adm-music-vol" type="range" min="0" max="100" step="5" value="60" oninput="document.getElementById('adm-music-vol-lbl').innerText=this.value+'%'" onchange="adminMusicSet({vol:parseInt(this.value)})" class="w-36 accent-amber-500" />
+          <span id="adm-music-vol-lbl" class="w-9 text-right font-bold text-white">60%</span>
+        </label>
+        <button id="adm-music-preview" onclick="adminMusicPreview()" class="px-3 py-2 rounded-lg border font-bold transition"></button>
+      </div>
+      <div id="adm-music-now" class="text-[11px] text-gray-400 mt-3"></div>
+    </div>
+
     <!-- Current question monitor (เฉพาะแอดมินเห็น) -->
     <div class="bg-arena-900/90 border border-arena-700/80 rounded-2xl p-4 md:p-6">
       <div class="flex flex-wrap items-center justify-between gap-2 mb-2 text-xs">
@@ -888,6 +912,197 @@
   </script>
 
   <!-- ========================================================================= -->
+  <!-- MUSIC ENGINE: เพลงประกอบสไตล์ควิซโชว์ (สังเคราะห์ด้วย Web Audio ทั้งหมด ไม่ใช้ไฟล์เสียง) -->
+  <!-- ========================================================================= -->
+  <script>
+    const MusicEngine = {
+      ctx: null, master: null, bus: null, timer: null,
+      cur: null, step: 0, nextT: 0, preview: false, noiseBuf: null, unlockBtn: null,
+      NAMES: { lobby: 'ลอบบี้ (รอผู้เล่น)', question: 'จับเวลาตอบ', ranking: 'อันดับ / ชัยชนะ' },
+      BPM: { lobby: 126, question: 148, ranking: 112 },
+
+      // ---------- ตัวช่วยโน้ต ----------
+      _idx: { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 },
+      mid(n) { const m = /^([A-G]#?)(\d)$/.exec(n); return m ? 12 * (parseInt(m[2]) + 1) + this._idx[m[1]] : 0; },
+      hz(m) { return 440 * Math.pow(2, (m - 69) / 12); },
+      seq(str) { return str.split(' ').map(t => t === '.' ? 0 : this.mid(t)); },
+
+      // ---------- ทำนอง (เขียนใหม่ทั้งหมด ไม่ได้ลอกเพลงของใคร) ----------
+      T: null,
+      build() {
+        const s = (a) => a.map(x => this.seq(x));
+        this.T = {
+          lobby: {
+            roots: [48, 45, 41, 43],
+            lead: s(['E5 . G5 . E5 . C5 . D5 . E5 . G5 . . .',
+                     'E5 . A5 . E5 . C5 . B4 . C5 . E5 . . .',
+                     'F5 . A5 . F5 . C5 . D5 . F5 . A5 . . .',
+                     'D5 . G5 . D5 . B4 . C5 . D5 . G5 . . .'])
+          },
+          question: {
+            roots: [45, 41, 43, 40],
+            arp: [[69, 72, 76, 72], [65, 69, 72, 69], [67, 71, 74, 71], [64, 68, 71, 68]],
+            lead: s(['A5 . . A5 . . C6 . B5 . . . A5 . . .',
+                     'A5 . . A5 . . F5 . G5 . . . A5 . . .',
+                     'B5 . . B5 . . D6 . C6 . . . B5 . . .',
+                     'B5 . . B5 . . G#5 . . . E5 . G#5 . B5 .'])
+          },
+          ranking: {
+            roots: [48, 41, 43, 48],
+            lead: s(['C5 . E5 . G5 . C6 . . . G5 . E5 . G5 .',
+                     'A4 . C5 . F5 . A5 . . . F5 . C5 . F5 .',
+                     'B4 . D5 . G5 . B5 . . . G5 . D5 . G5 .',
+                     'C5 . E5 . G5 . C6 . E6 . . . C6 . . .'])
+          }
+        };
+      },
+
+      // ---------- เสียงพื้นฐาน ----------
+      ensureCtx() {
+        AudioEngine.init();
+        this.ctx = AudioEngine.ctx;
+        if (!this.ctx) return false;
+        if (!this.master) {
+          this.master = this.ctx.createGain();
+          const comp = this.ctx.createDynamicsCompressor();
+          this.master.connect(comp); comp.connect(this.ctx.destination);
+          const len = this.ctx.sampleRate;
+          this.noiseBuf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+          const d = this.noiseBuf.getChannelData(0);
+          for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+          this.build();
+        }
+        return true;
+      },
+      osc(type, f, t, dur, g) {
+        const c = this.ctx, o = c.createOscillator(), a = c.createGain();
+        o.type = type; o.frequency.setValueAtTime(f, t);
+        a.gain.setValueAtTime(0.0001, t);
+        a.gain.exponentialRampToValueAtTime(g, t + 0.006);
+        a.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(a); a.connect(this.bus);
+        o.start(t); o.stop(t + dur + 0.03);
+      },
+      kick(t) {
+        const c = this.ctx, o = c.createOscillator(), a = c.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+        a.gain.setValueAtTime(0.55, t); a.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+        o.connect(a); a.connect(this.bus); o.start(t); o.stop(t + 0.2);
+      },
+      noise(t, dur, g, hpFreq) {
+        const c = this.ctx, n = c.createBufferSource(), f = c.createBiquadFilter(), a = c.createGain();
+        n.buffer = this.noiseBuf; f.type = 'highpass'; f.frequency.value = hpFreq;
+        a.gain.setValueAtTime(g, t); a.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        n.connect(f); f.connect(a); a.connect(this.bus); n.start(t); n.stop(t + dur + 0.02);
+      },
+
+      // ---------- เล่นทีละ step (1 step = โน้ต 16 ส่วน) ----------
+      playStep(name, step, t, sd) {
+        const tr = this.T[name], bar = Math.floor(step / 16) % 4, s = step % 16, root = tr.roots[bar];
+        const lead = tr.lead[bar][s];
+        if (name === 'lobby') {
+          if (s % 4 === 0) this.kick(t);
+          if (s === 4 || s === 12) this.noise(t, 0.12, 0.18, 1800);
+          if (s % 4 === 2) this.noise(t, 0.04, 0.07, 7000);
+          if (s % 2 === 0) this.osc('triangle', this.hz(s % 4 === 0 ? root : root + 12), t, sd * 1.6, 0.34);
+          if (lead) this.osc('square', this.hz(lead), t, sd * 1.3, 0.085);
+          if (s === 0) [0, 4, 7].forEach(i => this.osc('triangle', this.hz(root + 24 + i), t, sd * 3, 0.05));
+        } else if (name === 'question') {
+          if (s % 4 === 0) this.kick(t);
+          if (s === 4 || s === 12) this.noise(t, 0.1, 0.2, 2200);
+          if (s % 2 === 0) this.noise(t, 0.03, s % 4 === 2 ? 0.09 : 0.05, 8000);
+          if (s % 2 === 0) this.osc('triangle', this.hz(root + (s % 4 === 2 ? 12 : 0)), t, sd * 1.5, 0.32);
+          if (s % 2 === 0) this.osc('square', this.hz(tr.arp[bar][(s / 2) % 4]), t, sd * 1.2, 0.05);
+          if (lead) this.osc('square', this.hz(lead), t, sd * 1.6, 0.075);
+        } else { // ranking
+          if (s % 4 === 0) this.kick(t);
+          if (s === 4 || s === 12) this.noise(t, 0.14, 0.2, 1500);
+          if (s % 2 === 0) this.noise(t, 0.03, 0.05, 8000);
+          if (s % 4 === 0) this.osc('triangle', this.hz(root), t, sd * 3.2, 0.38);
+          if (lead) this.osc('square', this.hz(lead), t, sd * 1.8, 0.085);
+          if (s % 8 === 0) [0, 4, 7].forEach(i => this.osc('triangle', this.hz(root + 24 + i), t, sd * 7, 0.05));
+        }
+      },
+      tick() {
+        if (!this.cur || !this.ctx) return;
+        const sd = 60 / this.BPM[this.cur] / 4;
+        if (this.nextT < this.ctx.currentTime) this.nextT = this.ctx.currentTime + 0.05;
+        while (this.nextT < this.ctx.currentTime + 0.6) {
+          this.playStep(this.cur, this.step, this.nextT, sd);
+          this.nextT += sd; this.step++;
+        }
+      },
+
+      // ---------- เริ่ม/หยุด ----------
+      start(name) {
+        this.stop();
+        if (!name || !this.ensureCtx()) return;
+        this.bus = this.ctx.createGain();
+        this.bus.gain.setValueAtTime(0.0001, this.ctx.currentTime);
+        this.bus.gain.linearRampToValueAtTime(1, this.ctx.currentTime + 0.25);
+        this.bus.connect(this.master);
+        this.cur = name; this.step = 0; this.nextT = this.ctx.currentTime + 0.08;
+        this.tick();
+        this.timer = setInterval(() => this.tick(), 100);
+      },
+      stop() {
+        clearInterval(this.timer); this.timer = null;
+        if (this.bus && this.ctx) {
+          const b = this.bus, c = this.ctx;
+          try { b.gain.cancelScheduledValues(c.currentTime); b.gain.setValueAtTime(b.gain.value, c.currentTime); b.gain.linearRampToValueAtTime(0.0001, c.currentTime + 0.2); } catch (e) {}
+          setTimeout(() => { try { b.disconnect(); } catch (e) {} }, 400);
+        }
+        this.bus = null; this.cur = null;
+      },
+
+      // ---------- ตัดสินใจว่าจะเล่นอะไร ----------
+      desired() {
+        const m = (typeof GameData !== 'undefined' && GameData.music) || {};
+        if (!m.on) return null;
+        const mode = m.mode || 'auto';
+        if (mode !== 'auto') return mode;
+        const stage = getProjectorStage();
+        if (stage === 'QUESTION') return GameData.status === 'QUESTION' ? 'question' : null;
+        if (stage === 'LOBBY' || stage === 'HOWTO') return 'lobby';
+        if (stage === 'RANKING') return 'ranking';
+        return null; // REVEAL / LOCKED = เงียบ เพื่อให้ได้ยินเสียงถูก/ผิด
+      },
+      shouldPlayHere() { return currentView === 'projector' || this.preview; },
+
+      sync() {
+        const want = this.shouldPlayHere() ? this.desired() : null;
+        if (want && !this.ensureCtx()) return;
+        if (want !== this.cur) this.start(want);
+        if (this.master) {
+          const v = Math.max(0, Math.min(100, Number((GameData.music || {}).vol ?? 60)));
+          this.master.gain.setTargetAtTime(v / 100 * 1.3, this.ctx.currentTime, 0.05);
+        }
+        this.updateUnlockBtn(!!want);
+      },
+
+      // ---------- ปลดล็อกเสียง (เบราว์เซอร์ต้องมีการคลิกก่อน) ----------
+      unlock() {
+        if (!this.ensureCtx()) return;
+        if (this.ctx.state !== 'running') this.ctx.resume().then(() => this.sync()).catch(() => {});
+        else this.updateUnlockBtn(!!this.cur);
+      },
+      updateUnlockBtn(wantPlaying) {
+        const blocked = wantPlaying && this.ctx && this.ctx.state !== 'running';
+        if (blocked && !this.unlockBtn) {
+          const b = document.createElement('button');
+          b.innerHTML = '🔊 แตะที่นี่เพื่อเปิดเสียงเพลง';
+          b.style.cssText = 'position:fixed;left:16px;bottom:16px;z-index:70;padding:10px 16px;border-radius:12px;background:#f59e0b;color:#000;font-weight:800;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.5)';
+          b.onclick = () => this.unlock();
+          document.body.appendChild(b); this.unlockBtn = b;
+        } else if (!blocked && this.unlockBtn) { this.unlockBtn.remove(); this.unlockBtn = null; }
+      }
+    };
+    ['pointerdown', 'keydown', 'touchstart'].forEach(ev =>
+      document.addEventListener(ev, () => { if (MusicEngine.ctx && MusicEngine.ctx.state !== 'running') MusicEngine.unlock(); }, { passive: true }));
+  </script>
+
+  <!-- ========================================================================= -->
   <!-- MAIN JAVASCRIPT APPLICATION CORE                                          -->
   <!-- ========================================================================= -->
   <script>
@@ -1114,6 +1329,7 @@
       totalTime: 20,
       roundStats: { correct: 0, wrong: 0, eliminated: 0 },
       projectorScreen: "AUTO", // AUTO = ตามสถานะเกม | LOBBY | QUESTION | REVEAL | RANKING = แอดมินล็อกหน้าจอเอง
+      music: { on: false, mode: 'auto', vol: 60 }, // เพลงประกอบ: on | mode = auto/lobby/question/ranking | vol 0-100
       questions: JSON.parse(JSON.stringify(DEFAULT_QUESTIONS)),
       players: [] // Array of { id, name, lives: 2, eliminated: false, answers: {}, score: 0, totalTimeTaken: 0 }
     };
@@ -1580,6 +1796,7 @@
       renderPlayerView();
       renderAdminView();
       renderHostHud();
+      try { MusicEngine.sync(); } catch (e) { console.warn('music', e); }
     }
 
     // =========================================================================
@@ -2202,6 +2419,52 @@
       renderAdminQMonitor();
       renderAdminQuestionsTable();
       renderAdminPlayers();
+      renderMusicPanel();
+    }
+
+    // =========================================================================
+    // MUSIC CONTROL (แอดมิน)
+    // =========================================================================
+    function ensureMusic() {
+      if (!GameData.music) GameData.music = { on: false, mode: 'auto', vol: 60 };
+      return GameData.music;
+    }
+    function adminMusicSet(patch) {
+      Object.assign(ensureMusic(), patch);
+      MusicEngine.unlock();
+      broadcastState();
+    }
+    function adminMusicToggle() { adminMusicSet({ on: !ensureMusic().on }); }
+    function adminMusicPreview() {
+      MusicEngine.preview = !MusicEngine.preview;
+      MusicEngine.unlock();
+      MusicEngine.sync();
+      renderMusicPanel();
+    }
+    function renderMusicPanel() {
+      const tg = document.getElementById('adm-music-toggle');
+      if (!tg) return;
+      const m = ensureMusic();
+      const base = 'px-4 py-2 rounded-xl border font-bold transition ';
+      tg.className = base + (m.on ? 'bg-emerald-600 text-white border-emerald-400' : 'bg-arena-800 text-gray-300 border-arena-600 hover:bg-arena-700');
+      tg.innerHTML = m.on ? '<i class="fa-solid fa-volume-high mr-1"></i> เพลง: เปิด' : '<i class="fa-solid fa-volume-xmark mr-1"></i> เพลง: ปิด';
+      document.querySelectorAll('.adm-music-mode').forEach(b => {
+        const on = b.dataset.mode === (m.mode || 'auto');
+        b.className = 'adm-music-mode px-3 py-2 rounded-lg border font-bold transition ' +
+          (on ? 'bg-gold-500 text-black border-gold-400' : 'bg-arena-800 text-gray-300 border-arena-600 hover:bg-arena-700');
+      });
+      const sl = document.getElementById('adm-music-vol');
+      if (sl && document.activeElement !== sl) {
+        sl.value = m.vol ?? 60;
+        document.getElementById('adm-music-vol-lbl').innerText = (m.vol ?? 60) + '%';
+      }
+      const pv = document.getElementById('adm-music-preview');
+      pv.className = 'px-3 py-2 rounded-lg border font-bold transition ' +
+        (MusicEngine.preview ? 'bg-sky-600 text-white border-sky-400' : 'bg-arena-800 text-gray-300 border-arena-600 hover:bg-arena-700');
+      pv.innerHTML = '<i class="fa-solid fa-headphones mr-1"></i> ' + (MusicEngine.preview ? 'กำลังฟังที่เครื่องนี้' : 'ฟังที่เครื่องนี้ด้วย');
+      const d = MusicEngine.desired();
+      document.getElementById('adm-music-now').innerText = !m.on ? 'เพลงปิดอยู่' :
+        (d ? 'ตอนนี้ควรเล่น: ' + MusicEngine.NAMES[d] : 'ตอนนี้เงียบ (ช่วงล็อกคำตอบ/เฉลย เพื่อให้ได้ยินเสียงถูก-ผิด)');
     }
 
     // Modal Operations
