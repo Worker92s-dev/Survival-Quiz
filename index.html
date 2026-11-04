@@ -597,7 +597,8 @@
           <span id="adm-proj-mode-label" class="text-[11px] text-gray-400"></span>
           <span class="flex items-center gap-2">
             <button onclick="switchView('projector')" class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px] font-bold hover:bg-amber-500/30"><i class="fa-solid fa-expand mr-1"></i> เปิดโหมดเวที (จอเดียว)</button>
-            <button onclick="openProjectorWindow()" class="px-2.5 py-1 rounded-lg bg-arena-800 text-gray-300 border border-arena-600 text-[11px] hover:bg-arena-700">หน้าต่างแยก (2 จอ)</button>
+            <button onclick="sendProjectorToScreen()" class="px-2.5 py-1 rounded-lg bg-emerald-600/20 text-emerald-300 border border-emerald-500/50 text-[11px] font-bold hover:bg-emerald-600/30"><i class="fa-solid fa-tv mr-1"></i> ส่งขึ้นจอโปรเจกเตอร์</button>
+            <button onclick="toggleProjectorPreview()" class="px-2.5 py-1 rounded-lg bg-arena-800 text-gray-300 border border-arena-600 text-[11px] hover:bg-arena-700"><i class="fa-regular fa-eye mr-1"></i> ดูตัวอย่าง</button>
           </span>
         </div>
         <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 text-xs">
@@ -609,6 +610,17 @@
           <button data-proj="HOWTO" onclick="adminSetProjectorScreen('HOWTO')" class="adm-proj-btn px-2 py-2 rounded-lg border font-bold transition">📖 วิธีเล่น</button>
         </div>
         <p class="text-[11px] text-gray-500 mt-2">เลือกหน้าอื่นนอกจาก "อัตโนมัติ" = ล็อกหน้าจอ ไม่เปลี่ยนตามปุ่มขั้นตอน (ผู้เล่นยังเล่นตามสถานะเกมปกติ) กด "อัตโนมัติ" เพื่อกลับไปตามสถานะเกม</p>
+        <div id="adm-screen-pick" class="hidden mt-2 flex flex-wrap items-center gap-2 text-xs">
+          <label class="text-gray-400">ส่งไปที่จอ:</label>
+          <select id="adm-screen-select" onchange="this.dataset.touched='1'" class="bg-arena-900 border border-arena-700 rounded-lg px-2 py-1 text-white"></select>
+          <span class="text-[11px] text-gray-500">(ต้องตั้ง Windows เป็น Extend: Win+P)</span>
+        </div>
+        <div id="adm-preview-wrap" class="hidden mt-3">
+          <div id="adm-preview-box" class="relative w-full overflow-hidden rounded-xl border border-arena-700 bg-black" style="aspect-ratio:16/9">
+            <iframe id="adm-preview-frame" title="ตัวอย่างหน้าจอโปรเจกเตอร์" style="position:absolute;left:0;top:0;width:1280px;height:720px;border:0;transform-origin:0 0;pointer-events:none"></iframe>
+          </div>
+          <p class="text-[11px] text-gray-500 mt-1">ตัวอย่างสดของสิ่งที่ผู้ชมเห็น (อาจช้ากว่าจริง 1-3 วินาที)</p>
+        </div>
       </div>
 
       <!-- Current Question Quick Info & Timer Adjuster -->
@@ -632,6 +644,16 @@
           </button>
         </div>
       </div>
+    </div>
+
+    <!-- Current question monitor (เฉพาะแอดมินเห็น) -->
+    <div class="bg-arena-900/90 border border-arena-700/80 rounded-2xl p-4 md:p-6">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-2 text-xs">
+        <span class="font-bold text-gray-300 uppercase tracking-wider"><i class="fa-solid fa-eye text-amber-400 mr-1"></i> ข้อปัจจุบัน & เฉลย (เฉพาะแอดมินเห็น)</span>
+        <span id="adm-qm-progress" class="text-gray-400"></span>
+      </div>
+      <div id="adm-qm-prompt" class="text-sm md:text-base font-bold text-white mb-3"></div>
+      <div id="adm-qm-options" class="grid sm:grid-cols-2 gap-2 text-xs"></div>
     </div>
 
     <!-- Question Management Section (CRUD & JSON Import/Export) -->
@@ -1205,9 +1227,93 @@
           };
           updateProjectorSubmissionProgress();
           renderAdminPlayers();
+          renderAdminQMonitor();
           markDirty();
         }
       }
+    }
+
+    // =========================================================================
+    // ส่งหน้าจอไปขึ้นโปรเจกเตอร์ + พรีวิว + มอนิเตอร์ข้อปัจจุบัน
+    // =========================================================================
+    function escHtml(t) { return String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+    async function sendProjectorToScreen() {
+      const url = baseUrl() + '?view=projector' + roomQS();
+      let target = null;
+      if ('getScreenDetails' in window) {
+        try {
+          const d = await window.getScreenDetails();
+          const list = d.screens;
+          if (list.length > 1) {
+            const sel = document.getElementById('adm-screen-select');
+            const prev = sel.dataset.touched ? sel.value : null;
+            sel.innerHTML = list.map((s, i) =>
+              '<option value="' + i + '">จอ ' + (i + 1) + ': ' + s.width + '×' + s.height +
+              (s === d.currentScreen ? ' (จอนี้)' : '') + (s.isPrimary ? ' • หลัก' : '') + '</option>').join('');
+            if (prev !== null) sel.value = prev;
+            else { const i = list.findIndex(s => s !== d.currentScreen); sel.value = String(i >= 0 ? i : 0); }
+            document.getElementById('adm-screen-pick').classList.remove('hidden');
+            target = list[parseInt(sel.value, 10)];
+          } else {
+            showToast('ตรวจเจอจอเดียว: ตั้ง Windows เป็น Extend (Win+P) แล้วกดอีกครั้ง', true);
+          }
+        } catch (e) {
+          showToast('ยังไม่ได้อนุญาตให้ตรวจจอ: จะเปิดหน้าต่างให้ลากไปจอโปรเจกเตอร์เอง', true);
+        }
+      }
+      const feat = target
+        ? 'popup=yes,left=' + (target.availLeft != null ? target.availLeft : target.left) +
+          ',top=' + (target.availTop != null ? target.availTop : target.top) +
+          ',width=' + (target.availWidth || target.width) + ',height=' + (target.availHeight || target.height)
+        : 'popup=yes,width=1280,height=720';
+      const w = window.open(url, 'sq_projector', feat);
+      if (!w) { showToast('เบราว์เซอร์บล็อกป๊อปอัป: อนุญาตป๊อปอัปของเว็บนี้แล้วลองใหม่', true); return; }
+      showToast(target ? 'ส่งขึ้นจอโปรเจกเตอร์แล้ว: คลิก 1 ครั้งที่จอนั้นเพื่อเต็มจอ' : 'เปิดหน้าต่างโปรเจกเตอร์แล้ว: ลากไปจอโปรเจกเตอร์แล้วกด F11');
+    }
+
+    function fitPreview() {
+      const box = document.getElementById('adm-preview-box');
+      const fr = document.getElementById('adm-preview-frame');
+      if (box && fr && box.clientWidth) fr.style.transform = 'scale(' + (box.clientWidth / 1280) + ')';
+    }
+    function toggleProjectorPreview() {
+      const wrap = document.getElementById('adm-preview-wrap');
+      const fr = document.getElementById('adm-preview-frame');
+      const show = wrap.classList.contains('hidden');
+      wrap.classList.toggle('hidden', !show);
+      if (show) { fr.src = baseUrl() + '?view=projector&preview=1' + roomQS(); fitPreview(); }
+      else { fr.src = 'about:blank'; }
+    }
+    window.addEventListener('resize', fitPreview);
+
+    function renderAdminQMonitor() {
+      const wrap = document.getElementById('adm-qm-options');
+      if (!wrap) return;
+      const idx = GameData.currentQIndex;
+      const q = GameData.questions[idx];
+      const promptEl = document.getElementById('adm-qm-prompt');
+      const prog = document.getElementById('adm-qm-progress');
+      if (!q) { promptEl.innerText = 'ครบทุกข้อแล้ว'; wrap.innerHTML = ''; prog.innerText = ''; return; }
+      promptEl.innerText = 'ข้อ ' + (idx + 1) + ': ' + q.prompt;
+      const counts = [0, 0, 0, 0];
+      let submitted = 0;
+      GameData.players.forEach(p => {
+        const a = p.answers && p.answers[idx];
+        if (a) { submitted++; if (counts[a.choice] !== undefined) counts[a.choice]++; }
+      });
+      const alive = GameData.players.filter(p => !p.eliminated).length;
+      const max = Math.max(1, ...counts);
+      const letters = ['A', 'B', 'C', 'D'];
+      wrap.innerHTML = q.options.map((o, i) => {
+        const ok = i === q.correct;
+        return '<div class="rounded-lg border px-3 py-2 ' + (ok ? 'border-emerald-500/70 bg-emerald-900/20' : 'border-arena-700 bg-arena-900') + '">' +
+          '<div class="flex items-center justify-between gap-2"><span class="font-bold ' + (ok ? 'text-emerald-300' : 'text-gray-200') + '">' +
+          letters[i] + '. ' + escHtml(o) + (ok ? ' ✓ เฉลย' : '') + '</span><span class="text-gray-400 shrink-0">' + counts[i] + ' คน</span></div>' +
+          '<div class="h-1.5 mt-1 rounded bg-arena-800 overflow-hidden"><div class="h-full ' + (ok ? 'bg-emerald-500' : 'bg-amber-500') + '" style="width:' + Math.round(counts[i] / max * 100) + '%"></div></div></div>';
+      }).join('');
+      const label = { LOBBY: 'ยังไม่เปิด', QUESTION: 'กำลังตอบ ⏱ ' + GameData.timer + ' วิ', LOCKED: 'ปิดรับแล้ว', REVEAL: 'เฉลยแล้ว', RANKING: 'แสดงอันดับ' }[GameData.status] || '';
+      prog.innerText = 'ตอบแล้ว ' + submitted + ' / ' + alive + ' คน • ' + label;
     }
 
     // =========================================================================
@@ -1370,9 +1476,10 @@
       currentView = viewName;
 
       // Host Stage Mode: โชว์หน้าโปรเจกเตอร์ในหน้าต่างเดียวกับแอดมิน ซ่อนแถบหัวเว็บ + มีแถบควบคุมลอยเรียกใช้ด้วยเมาส์/คีย์ลัด
-      const hostStage = isHost && viewName === 'projector';
+      const hostStage = isHost && viewName === 'projector' && _qs.get('preview') !== '1';
+      const cleanProj = !isHost && viewName === 'projector';
       const hdr = document.querySelector('header');
-      if (hdr) hdr.classList.toggle('hidden', hostStage);
+      if (hdr) hdr.classList.toggle('hidden', hostStage || cleanProj);
       const hud = document.getElementById('host-hud');
       if (hud) {
         hud.classList.toggle('hidden', !hostStage);
@@ -2092,6 +2199,7 @@
       const lbl = document.getElementById('adm-proj-mode-label');
       if (lbl) lbl.innerText = pm === 'AUTO' ? 'โหมด: ตามสถานะเกม (' + getProjectorStage() + ')' : 'โหมด: ล็อกด้วยมือ';
 
+      renderAdminQMonitor();
       renderAdminQuestionsTable();
       renderAdminPlayers();
     }
@@ -2337,6 +2445,18 @@
         document.addEventListener('keydown', (e) => {
           if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'a') ab.click();
         });
+      }
+      if (!isHost && _qs.get('view') === 'projector' && _qs.get('preview') !== '1') {
+        const hint = document.createElement('div');
+        hint.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:300;padding:8px 16px;border-radius:999px;background:rgba(245,158,11,.95);color:#000;font-weight:700;font-size:14px;pointer-events:none;';
+        hint.innerText = 'คลิก 1 ครั้งที่หน้าจอนี้เพื่อเต็มจอ (หรือกด F11)';
+        document.body.appendChild(hint);
+        const rm = () => { if (hint.parentNode) hint.remove(); };
+        setTimeout(rm, 9000);
+        document.addEventListener('click', () => {
+          rm();
+          if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+        }, { once: true });
       }
       // Check query param for default view (e.g. ?view=projector or ?view=admin)
       const params = new URLSearchParams(window.location.search);
