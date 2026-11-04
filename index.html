@@ -1144,6 +1144,10 @@
     // =========================================================================
     function switchView(viewName) {
       if (REMOTE && viewName === 'admin' && !isHost) viewName = 'player';
+      if (REMOTE && isHost && viewName === 'projector') {
+        window.open(window.location.pathname + '?view=projector', '_blank');
+        return;
+      }
       const views = ['player', 'projector', 'admin'];
       views.forEach(v => {
         const el = document.getElementById(`view-${v}`);
@@ -1161,6 +1165,9 @@
         const bar = document.getElementById('btn-tab-player').parentElement;
         if (bar) bar.classList.add('hidden');
       }
+
+      const aob = document.getElementById('admin-open-btn');
+      if (aob) aob.style.display = (viewName === 'player') ? '' : 'none';
 
       if (viewName === 'projector') {
         renderQRCode();
@@ -2003,6 +2010,7 @@
         if (b) b.classList.add('hidden');
         // ปุ่มเล็กมุมขวาล่าง: กดแล้วใส่รหัสแอดมินเพื่อเข้าหน้าควบคุม
         const ab = document.createElement('button');
+        ab.id = 'admin-open-btn';
         ab.innerHTML = '<i class="fa-solid fa-lock"></i> ผู้ดูแลระบบ';
         ab.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:50;font-size:12px;padding:6px 12px;border-radius:999px;background:rgba(30,41,59,.85);color:#cbd5e1;border:1px solid #334155;opacity:.45;cursor:pointer;';
         ab.onmouseenter = () => ab.style.opacity = '1';
@@ -2035,10 +2043,13 @@
           pw.onkeydown = (e) => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') box.remove(); };
         };
         document.body.appendChild(ab);
+        document.addEventListener('keydown', (e) => {
+          if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'a') ab.click();
+        });
       }
       // Check query param for default view (e.g. ?view=projector or ?view=admin)
       const params = new URLSearchParams(window.location.search);
-      const initialView = params.get('view') || 'projector';
+      const initialView = params.get('view') || ((REMOTE && !isHost) ? 'player' : 'projector');
       switchView(initialView);
       renderQRCode();
     };
