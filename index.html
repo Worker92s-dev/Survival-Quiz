@@ -1042,7 +1042,10 @@
 
     const REMOTE = !!(window.supabase && SUPABASE_URL && !SUPABASE_URL.includes('YOUR-PROJECT'));
     const _qs = new URLSearchParams(window.location.search);
-    const isHost = !REMOTE || (_qs.get('view') === 'admin' && _qs.get('key') === HOST_KEY);
+    let _hk = _qs.get('key');
+    try { if (_hk) sessionStorage.setItem('sq_hostkey', _hk); else _hk = sessionStorage.getItem('sq_hostkey'); } catch (e) {}
+    const isHost = !REMOTE || (_qs.get('view') === 'admin' && _hk === HOST_KEY);
+    if (_qs.get('key')) { try { history.replaceState(null, '', window.location.pathname + '?view=' + (_qs.get('view') || 'admin')); } catch (e) {} }
     let sb = null, downCh = null, upCh = null, downReady = false;
     let dirty = false, flushTimer = null, localTick = null;
 
@@ -2005,10 +2008,31 @@
         ab.onmouseenter = () => ab.style.opacity = '1';
         ab.onmouseleave = () => ab.style.opacity = '.45';
         ab.onclick = () => {
-          const k = prompt('ใส่รหัสผู้ดูแลระบบ');
-          if (k === null) return;
-          if (k === HOST_KEY) window.location.href = window.location.pathname + '?view=admin&key=' + encodeURIComponent(k);
-          else alert('รหัสไม่ถูกต้อง');
+          if (document.getElementById('admin-login-box')) return;
+          const box = document.createElement('div');
+          box.id = 'admin-login-box';
+          box.style.cssText = 'position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;';
+          box.innerHTML = '<div style="background:#0f172a;border:1px solid #334155;border-radius:16px;padding:24px;width:300px;color:#e2e8f0;font-family:inherit">' +
+            '<div style="font-weight:700;margin-bottom:12px">รหัสผู้ดูแลระบบ</div>' +
+            '<input id="admin-pw" type="password" autocomplete="off" style="width:100%;padding:10px;border-radius:10px;background:#020617;border:1px solid #334155;color:#fff;outline:none">' +
+            '<div id="admin-err" style="color:#f87171;font-size:12px;height:16px;margin-top:6px"></div>' +
+            '<div style="display:flex;gap:8px;margin-top:8px"><button id="admin-ok" style="flex:1;padding:8px;border-radius:10px;background:#f59e0b;color:#000;font-weight:700">เข้าสู่ระบบ</button>' +
+            '<button id="admin-cancel" style="padding:8px 14px;border-radius:10px;background:#1e293b;color:#cbd5e1">ยกเลิก</button></div></div>';
+          document.body.appendChild(box);
+          const pw = document.getElementById('admin-pw');
+          pw.focus();
+          const submit = () => {
+            if (pw.value === HOST_KEY) {
+              try { sessionStorage.setItem('sq_hostkey', pw.value); } catch (e) {}
+              window.location.href = window.location.pathname + '?view=admin';
+            } else {
+              document.getElementById('admin-err').innerText = 'รหัสไม่ถูกต้อง';
+              pw.value = '';
+            }
+          };
+          document.getElementById('admin-ok').onclick = submit;
+          document.getElementById('admin-cancel').onclick = () => box.remove();
+          pw.onkeydown = (e) => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') box.remove(); };
         };
         document.body.appendChild(ab);
       }
