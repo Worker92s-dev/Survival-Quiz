@@ -543,7 +543,7 @@
             <button onclick="copyRoomLink()" class="px-3 py-2 rounded-lg bg-arena-800 border border-arena-600 text-white font-bold hover:bg-arena-700"><i class="fa-solid fa-copy mr-1"></i> คัดลอก</button>
           </div>
           <div class="flex flex-wrap gap-2 items-center">
-            <input id="adm-room-custom" maxlength="24" placeholder="ตั้งรหัสห้องเอง (A-Z, 0-9) หรือเว้นว่างให้สุ่ม" class="flex-1 min-w-[200px] bg-arena-950 border border-arena-700 rounded-lg px-3 py-2 text-white uppercase" />
+            <input id="adm-room-custom" autocomplete="off" maxlength="24" placeholder="ตั้งรหัสห้องเอง (A-Z, 0-9) หรือเว้นว่างให้สุ่ม" class="flex-1 min-w-[200px] bg-arena-950 border border-arena-700 rounded-lg px-3 py-2 text-white uppercase" />
             <button onclick="adminCreateRoom()" class="px-4 py-2 rounded-lg bg-amber-500 text-black font-bold hover:bg-amber-400"><i class="fa-solid fa-plus mr-1"></i> สร้างห้องใหม่</button>
           </div>
           <div class="flex flex-wrap gap-2 items-center">
@@ -1609,9 +1609,21 @@
         localStorage.setItem('sq_rooms', JSON.stringify(list.slice(0, 12)));
       } catch (e) {}
     }
+    // หน้าต่างโปรเจกเตอร์ (เบราว์เซอร์เดียวกัน) จะย้ายตามแอดมินไปห้องใหม่เอง ไม่ต้องกดส่งขึ้นจอใหม่
+    let _followCh = null;
+    try {
+      _followCh = new BroadcastChannel('sq_projector_follow');
+      _followCh.onmessage = (e) => {
+        const d = e.data || {};
+        if (d.type === 'GOTO' && d.to && d.from === ROOM_CODE && _qs.get('view') === 'projector' && _qs.get('preview') !== '1') {
+          window.location.href = baseUrl() + '?view=projector&room=' + encodeURIComponent(d.to);
+        }
+      };
+    } catch (e) {}
     function goRoom(code) {
       saveRoom(code);
-      window.location.href = baseUrl() + '?view=admin&room=' + encodeURIComponent(code);
+      try { if (_followCh) _followCh.postMessage({ type: 'GOTO', from: ROOM_CODE, to: code }); } catch (e) {}
+      setTimeout(() => { window.location.href = baseUrl() + '?view=admin&room=' + encodeURIComponent(code); }, 250);
     }
     function adminCreateRoom() {
       const input = document.getElementById('adm-room-custom');
@@ -1619,7 +1631,11 @@
       let code = raw.replace(/[^A-Za-z0-9_-]/g, '').toUpperCase().slice(0, 24);
       if (raw && !code) { showToast('รหัสห้องใช้ได้เฉพาะ A-Z, 0-9, - และ _', true); return; }
       if (!code) code = genRoomCode();
-      if (code === ROOM_CODE) { showToast('คุณอยู่ในห้องนี้อยู่แล้ว', true); return; }
+      if (code === ROOM_CODE) { // พิมพ์รหัสซ้ำกับห้องปัจจุบัน -> สุ่มรหัสใหม่ให้เลย
+        do { code = genRoomCode(); } while (code === ROOM_CODE);
+        input.value = '';
+        showToast('รหัสซ้ำกับห้องปัจจุบัน จึงสุ่มรหัสใหม่ให้: ' + code);
+      }
       if (GameData.players.length > 0 && !confirm('สร้างห้องใหม่ "' + code + '" ?\nผู้เล่นในห้องปัจจุบันจะไม่ตามไปห้องใหม่ (ห้องเก่ายังอยู่ กลับมาเลือกได้)')) return;
       goRoom(code);
     }
