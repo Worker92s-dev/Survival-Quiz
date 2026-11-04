@@ -1,0 +1,7 @@
+{
+  "redirects": [
+    { "source": "/host-senate", "destination": "/?view=admin&key=SENATE-SIMULATION", "permanent": false },
+    { "source": "/projector",   "destination": "/?view=projector", "permanent": false },
+    { "source": "/play",        "destination": "/?view=player",    "permanent": false }
+  ]
+}
