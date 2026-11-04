@@ -1,0 +1,2005 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SURVIVAL QUIZ: THE LAST ONE STANDING</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Google Fonts: Prompt & Kanit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,300;0,400;0,600;0,800;0,900;1,700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- QRCode Generator Lib -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Prompt', 'sans-serif'],
+            display: ['Kanit', 'sans-serif'],
+          },
+          colors: {
+            arena: {
+              950: '#060913',
+              900: '#0B0F1E',
+              800: '#141C36',
+              700: '#1F2B52',
+            },
+            gold: {
+              400: '#FBBF24',
+              500: '#F59E0B',
+              600: '#D97706',
+            },
+            danger: {
+              DEFAULT: '#EF4444',
+              dark: '#991B1B'
+            },
+            success: {
+              DEFAULT: '#10B981',
+              dark: '#065F46'
+            }
+          },
+          animation: {
+            'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'bounce-short': 'bounce 0.8s infinite',
+            'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
+          },
+          keyframes: {
+            shake: {
+              '10%, 90%': { transform: 'translate3d(-1px, 0, 0)' },
+              '20%, 80%': { transform: 'translate3d(2px, 0, 0)' },
+              '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0)' },
+              '40%, 60%': { transform: 'translate3d(4px, 0, 0)' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #060913;
+      color: #F3F4F6;
+      font-family: 'Prompt', sans-serif;
+      overflow-x: hidden;
+      touch-action: manipulation;
+    }
+    .text-glow-gold {
+      text-shadow: 0 0 20px rgba(245, 158, 11, 0.6), 0 0 40px rgba(245, 158, 11, 0.3);
+    }
+    .text-glow-red {
+      text-shadow: 0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(239, 68, 68, 0.4);
+    }
+    .text-glow-green {
+      text-shadow: 0 0 20px rgba(16, 185, 129, 0.8);
+    }
+    .box-glow {
+      box-shadow: 0 0 35px -5px rgba(245, 158, 11, 0.25);
+    }
+    .box-glow-danger {
+      box-shadow: 0 0 35px -5px rgba(239, 68, 68, 0.4);
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0B0F1E;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1F2B52;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #F59E0B;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-gold-500 selection:text-black">
+
+  <!-- TOP BAR / ROLE SELECTOR (Always accessible for easy switching & debug) -->
+  <header class="bg-arena-900/90 backdrop-blur border-b border-arena-700/60 sticky top-0 z-50 px-4 py-2 flex flex-wrap items-center justify-between gap-2 shadow-lg">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-600 to-yellow-400 flex items-center justify-center text-black font-black font-display text-lg shadow">
+        ⚡
+      </div>
+      <div>
+        <h1 class="text-sm md:text-base font-extrabold tracking-wider font-display bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-500 bg-clip-text text-transparent">
+          SURVIVAL QUIZ
+        </h1>
+        <p class="text-[10px] text-gray-400 leading-none">THE LAST ONE STANDING • รัฐสภาและประชาธิปไตย</p>
+      </div>
+    </div>
+
+    <!-- Mode Switcher Tabs -->
+    <div class="flex items-center bg-arena-950 p-1 rounded-xl border border-arena-700/80 text-xs">
+      <button onclick="switchView('player')" id="btn-tab-player" class="px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 bg-gold-500 text-black font-bold shadow">
+        <i class="fa-solid fa-mobile-screen"></i> <span>ผู้เล่น (Mobile)</span>
+      </button>
+      <button onclick="switchView('projector')" id="btn-tab-projector" class="px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 text-gray-400 hover:text-white">
+        <i class="fa-solid fa-chalkboard-user"></i> <span>โปรเจกเตอร์ (Stage)</span>
+      </button>
+      <button onclick="switchView('admin')" id="btn-tab-admin" class="px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 text-gray-400 hover:text-white">
+        <i class="fa-solid fa-sliders"></i> <span>ควบคุม (Host Admin)</span>
+      </button>
+    </div>
+
+    <div class="hidden lg:flex items-center gap-3 text-xs">
+      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-arena-800 border border-arena-700 text-gray-300">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        PIN: <span id="nav-pin" class="font-mono font-bold text-amber-400">9999</span>
+      </span>
+      <span id="nav-live-count" class="text-gray-400"><i class="fa-solid fa-users text-amber-400 mr-1"></i>0 คน</span>
+    </div>
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- 1. PLAYER SCREEN (Mobile-Optimized)                                     -->
+  <!-- ========================================================================= -->
+  <main id="view-player" class="flex-1 max-w-lg mx-auto w-full p-4 flex flex-col justify-center">
+    
+    <!-- Player: Join State -->
+    <div id="player-join-card" class="bg-arena-900/90 border border-arena-700 rounded-3xl p-6 md:p-8 shadow-2xl backdrop-blur relative overflow-hidden">
+      <div class="absolute -top-12 -right-12 w-36 h-36 bg-amber-500/10 rounded-full blur-2xl"></div>
+      
+      <div class="text-center mb-6">
+        <div class="inline-block p-4 rounded-2xl bg-arena-800 border border-arena-700 text-amber-400 text-3xl mb-3 shadow-inner">
+          <i class="fa-solid fa-landmark-dome"></i>
+        </div>
+        <h2 class="text-2xl font-black font-display text-white">ลงทะเบียนเข้าสมรภูมิ</h2>
+        <p class="text-xs text-gray-400 mt-1">เกมเอาชีวิตรอดทางความรู้ประชาธิปไตย (200 ผู้แข่งขัน)</p>
+      </div>
+
+      <form id="player-join-form" onsubmit="handlePlayerJoin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Game PIN 4 หลัก</label>
+          <input type="text" id="player-input-pin" required maxlength="6" placeholder="เช่น 9999" class="w-full text-center text-2xl tracking-widest font-mono font-bold bg-arena-950 border border-arena-700 rounded-xl px-4 py-3 text-amber-400 focus:outline-none focus:border-amber-400 transition" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">ชื่อเล่น หรือ รหัสนักเรียน</label>
+          <input type="text" id="player-input-name" required maxlength="18" placeholder="เช่น ก้อง นิติ 01" class="w-full text-center text-lg font-bold bg-arena-950 border border-arena-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-400 transition" />
+        </div>
+
+        <div class="bg-arena-950/70 border border-arena-800 rounded-xl p-3 text-xs text-gray-300 space-y-1">
+          <div class="flex items-center text-amber-400 font-bold mb-1">
+            <i class="fa-solid fa-triangle-exclamation mr-1.5"></i> กติกาสูงสุด: 2 ชีวิต (NO REVIVE)
+          </div>
+          <p>• ตอบถูก: รักษาชีวิตและสะสมคะแนนตามความไว</p>
+          <p>• ตอบผิด หรือหมดเวลา: <span class="text-red-400 font-semibold">เสีย 1 ชีวิตทันที</span></p>
+          <p>• เสีย 2 ครั้ง: <span class="text-red-500 font-bold">ELIMINATED ตกรอบถาวร!</span></p>
+        </div>
+
+        <button type="submit" class="w-full py-4 rounded-xl font-display font-black text-lg bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 hover:to-yellow-300 text-black shadow-lg shadow-amber-500/20 active:scale-[0.98] transition">
+          เข้าสู่ห้องสอบชิงชีวิต <i class="fa-solid fa-arrow-right ml-1"></i>
+        </button>
+      </form>
+    </div>
+
+    <!-- Player: In-Game Active Card -->
+    <div id="player-game-card" class="hidden flex-1 flex flex-col justify-between py-2">
+      <!-- Player Header Info -->
+      <div class="bg-arena-900 border border-arena-700/80 rounded-2xl p-3.5 mb-3 shadow-md flex items-center justify-between">
+        <div>
+          <span class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">ผู้เข้าแข่งขัน</span>
+          <div id="p-display-name" class="font-extrabold text-base text-white truncate max-w-[150px]">น้องนักศึกษา</div>
+        </div>
+
+        <!-- Life Counter HUD -->
+        <div class="flex flex-col items-end">
+          <span class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">พลังชีวิตที่เหลือ</span>
+          <div id="p-hearts-container" class="flex items-center gap-1.5 text-xl mt-0.5">
+            <i class="fa-solid fa-heart text-red-500 drop-shadow"></i>
+            <i class="fa-solid fa-heart text-red-500 drop-shadow"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Elimination Banner (if dead) -->
+      <div id="p-eliminated-banner" class="hidden bg-red-950/80 border-2 border-red-600 rounded-2xl p-4 text-center my-3 animate-shake box-glow-danger">
+        <div class="text-red-500 text-4xl mb-1"><i class="fa-solid fa-skull-crossbones"></i></div>
+        <h3 class="text-xl font-black font-display text-red-400 tracking-widest">YOU ARE ELIMINATED!</h3>
+        <p class="text-xs text-gray-300 mt-1">คุณสูญเสียชีวิตครบ 2 ครั้งแล้ว ตกรอบทันที (ไม่สามารถกดส่งคำตอบได้ แต่ยังคงรับชมเฉลยและเกร็ดความรู้ได้จนจบเกม)</p>
+      </div>
+
+      <!-- Player Waiting State (Lobby / Before Question) -->
+      <div id="p-state-waiting" class="bg-arena-900/60 border border-arena-800 rounded-2xl p-8 text-center my-auto">
+        <div class="w-16 h-16 rounded-full bg-arena-800 border border-arena-700 flex items-center justify-center text-amber-400 text-2xl mx-auto mb-4 animate-bounce-short">
+          <i class="fa-solid fa-hourglass-half"></i>
+        </div>
+        <h3 id="p-waiting-title" class="text-xl font-bold font-display text-white">รอสัญญาณเริ่มคำถาม</h3>
+        <p id="p-waiting-sub" class="text-xs text-gray-400 mt-2">โปรดจับตาดูหน้าจอโปรเจกเตอร์ส่วนกลาง เจ้าหน้าที่กำลังควบคุมเกม</p>
+      </div>
+
+      <!-- Player Question & Choices -->
+      <div id="p-state-question" class="hidden flex-1 flex flex-col justify-between">
+        <!-- Question Badge & Timer -->
+        <div class="flex items-center justify-between mb-2">
+          <span id="p-round-badge" class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-arena-800 border border-arena-700 text-amber-400 uppercase">
+            ROUND 1
+          </span>
+          <div class="flex items-center gap-1.5 font-mono text-base font-bold text-amber-400">
+            <i class="fa-regular fa-clock"></i>
+            <span id="p-timer">15</span> วินาที
+          </div>
+        </div>
+
+        <!-- Question Prompt Preview on Mobile -->
+        <div class="bg-arena-900/90 border border-arena-700/80 rounded-2xl p-4 mb-3 shadow">
+          <div class="text-[11px] font-bold text-gray-400 mb-1">คำถามข้อที่ <span id="p-q-num">1</span></div>
+          <p id="p-q-text" class="text-sm md:text-base font-semibold text-gray-100 line-clamp-3">
+            กำลังโหลดคำถาม...
+          </p>
+        </div>
+
+        <!-- Answer Choices (Huge Touch Buttons) -->
+        <div class="grid grid-cols-1 gap-2.5 my-auto" id="p-choices-grid">
+          <button onclick="submitPlayerAnswer(0)" id="p-btn-opt-0" class="choice-btn group text-left p-3.5 rounded-2xl bg-arena-900 border-2 border-red-500/40 hover:border-red-400 active:bg-red-500/20 transition flex items-center gap-3">
+            <span class="w-10 h-10 rounded-xl bg-red-500 text-white font-black font-display text-lg flex items-center justify-center shrink-0 shadow">A</span>
+            <span id="p-opt-text-0" class="font-medium text-sm text-gray-200">ตัวเลือก A</span>
+          </button>
+          <button onclick="submitPlayerAnswer(1)" id="p-btn-opt-1" class="choice-btn group text-left p-3.5 rounded-2xl bg-arena-900 border-2 border-blue-500/40 hover:border-blue-400 active:bg-blue-500/20 transition flex items-center gap-3">
+            <span class="w-10 h-10 rounded-xl bg-blue-500 text-white font-black font-display text-lg flex items-center justify-center shrink-0 shadow">B</span>
+            <span id="p-opt-text-1" class="font-medium text-sm text-gray-200">ตัวเลือก B</span>
+          </button>
+          <button onclick="submitPlayerAnswer(2)" id="p-btn-opt-2" class="choice-btn group text-left p-3.5 rounded-2xl bg-arena-900 border-2 border-amber-500/40 hover:border-amber-400 active:bg-amber-500/20 transition flex items-center gap-3">
+            <span class="w-10 h-10 rounded-xl bg-amber-500 text-white font-black font-display text-lg flex items-center justify-center shrink-0 shadow">C</span>
+            <span id="p-opt-text-2" class="font-medium text-sm text-gray-200">ตัวเลือก C</span>
+          </button>
+          <button onclick="submitPlayerAnswer(3)" id="p-btn-opt-3" class="choice-btn group text-left p-3.5 rounded-2xl bg-arena-900 border-2 border-emerald-500/40 hover:border-emerald-400 active:bg-emerald-500/20 transition flex items-center gap-3">
+            <span class="w-10 h-10 rounded-xl bg-emerald-500 text-white font-black font-display text-lg flex items-center justify-center shrink-0 shadow">D</span>
+            <span id="p-opt-text-3" class="font-medium text-sm text-gray-200">ตัวเลือก D</span>
+          </button>
+        </div>
+
+        <div id="p-submitted-notice" class="hidden text-center py-2 text-xs font-bold text-amber-400 bg-amber-500/10 rounded-xl border border-amber-500/30">
+          <i class="fa-solid fa-lock mr-1"></i> บันทึกคำตอบของคุณแล้ว! รอนับเวลาถอยหลังเพื่อเฉลย
+        </div>
+      </div>
+
+      <!-- Player Answer Reveal Feedback Screen -->
+      <div id="p-state-reveal" class="hidden flex-1 flex flex-col justify-center text-center p-4">
+        <div id="p-reveal-badge" class="w-20 h-20 rounded-full mx-auto flex items-center justify-center text-4xl mb-3 shadow-lg">
+          <i class="fa-solid fa-check"></i>
+        </div>
+        <h3 id="p-reveal-status-title" class="text-2xl font-black font-display text-white">ยอดเยี่ยม! คุณตอบถูก</h3>
+        <p id="p-reveal-life-msg" class="text-xs text-gray-300 mt-1">รักษาชีวิตไว้ได้ (เหลือ 2 หัวใจ)</p>
+
+        <!-- Short civic knowledge box -->
+        <div class="mt-4 bg-arena-900/90 border border-arena-700/80 rounded-2xl p-4 text-left shadow">
+          <div class="text-[11px] font-bold uppercase text-amber-400 mb-1 flex items-center gap-1">
+            <i class="fa-solid fa-lightbulb"></i> เกร็ดความรู้รัฐสภา:
+          </div>
+          <p id="p-reveal-explanation" class="text-xs text-gray-200 leading-relaxed">
+            คำอธิบายสาระสำคัญจะปรากฏตรงนี้เพื่อให้ผู้เล่นได้เรียนรู้ร่วมกัน
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- 2. PROJECTOR SCREEN (Auditorium & Stage Display 16:9)                     -->
+  <!-- ========================================================================= -->
+  <main id="view-projector" class="hidden flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 flex flex-col justify-between">
+    
+    <!-- Top HUD Bar -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4">
+      <!-- Total Players -->
+      <div class="bg-arena-900/90 border border-arena-700/80 rounded-2xl p-3 md:p-4 text-center">
+        <div class="text-[11px] md:text-xs uppercase font-bold text-gray-400">ผู้เข้าร่วมทั้งหมด</div>
+        <div id="proj-stat-total" class="font-display font-black text-2xl md:text-4xl text-white">0</div>
+        <div class="text-[10px] text-gray-400">นักเรียนในห้องแข่งขัน</div>
+      </div>
+      <!-- Survivors (Alive) -->
+      <div class="bg-emerald-950/60 border border-emerald-500/50 rounded-2xl p-3 md:p-4 text-center">
+        <div class="text-[11px] md:text-xs uppercase font-bold text-emerald-400">ผู้รอดชีวิต (SURVIVORS)</div>
+        <div id="proj-stat-alive" class="font-display font-black text-2xl md:text-4xl text-emerald-400 text-glow-green">0</div>
+        <div class="text-[10px] text-emerald-300">ยังมีสิทธิ์ลุ้นแชมป์</div>
+      </div>
+      <!-- Danger: 1 Life Left -->
+      <div class="bg-amber-950/60 border border-amber-500/50 rounded-2xl p-3 md:p-4 text-center">
+        <div class="text-[11px] md:text-xs uppercase font-bold text-amber-400">เหลือ 1 ชีวิต (CRITICAL)</div>
+        <div id="proj-stat-danger" class="font-display font-black text-2xl md:text-4xl text-amber-400 text-glow-gold">0</div>
+        <div class="text-[10px] text-amber-300">ผิดอีกครั้งตกรอบทันที</div>
+      </div>
+      <!-- Eliminated -->
+      <div class="bg-red-950/60 border border-red-500/50 rounded-2xl p-3 md:p-4 text-center">
+        <div class="text-[11px] md:text-xs uppercase font-bold text-red-400">ตกรอบแล้ว (ELIMINATED)</div>
+        <div id="proj-stat-eliminated" class="font-display font-black text-2xl md:text-4xl text-red-500 text-glow-red">0</div>
+        <div class="text-[10px] text-red-400">หมดสิทธิ์ตอบ</div>
+      </div>
+    </div>
+
+    <!-- MAIN DISPLAY CONTENT AREA -->
+    <div class="flex-1 flex flex-col justify-center my-2">
+      
+      <!-- Stage State: LOBBY -->
+      <div id="proj-stage-lobby" class="bg-arena-900/90 border border-arena-700/80 rounded-3xl p-6 md:p-12 text-center box-glow relative overflow-hidden">
+        <div class="inline-block px-4 py-1.5 rounded-full bg-gold-500/20 border border-gold-500/40 text-gold-400 font-bold text-xs uppercase tracking-widest mb-4">
+          ห้องสมรภูมิความรู้ประชาธิปไตย
+        </div>
+        <h2 class="text-4xl md:text-6xl font-black font-display tracking-tight text-white mb-2">
+          SURVIVAL QUIZ
+        </h2>
+        <h3 class="text-xl md:text-3xl font-extrabold text-amber-400 text-glow-gold font-display mb-8">
+          THE LAST ONE STANDING
+        </h3>
+
+        <!-- QR Code & PIN Area -->
+        <div class="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-14 my-6">
+          <div class="bg-white p-4 rounded-2xl shadow-2xl flex flex-col items-center">
+            <div id="proj-qrcode-container" class="w-48 h-48 flex items-center justify-center"></div>
+            <p class="text-[11px] font-bold text-gray-800 mt-2 font-mono">SCAN TO JOIN NOW</p>
+          </div>
+
+          <div class="text-left space-y-4">
+            <div>
+              <p class="text-xs uppercase font-bold text-gray-400 tracking-wider">GAME PIN รหัสเข้าเกม</p>
+              <div id="proj-big-pin" class="font-mono font-black text-5xl md:text-7xl text-amber-400 tracking-wider">9999</div>
+            </div>
+            <div class="space-y-1 text-sm text-gray-300">
+              <p><i class="fa-solid fa-heart text-red-500 mr-2"></i>ทุกคนมี <span class="font-bold text-white">2 ชีวิต</span> (ตอบผิดเสีย 1 ชีวิต)</p>
+              <p><i class="fa-solid fa-ban text-red-400 mr-2"></i><span class="font-bold text-red-400">NO REVIVE</span> ตกรอบแล้วหมดสิทธิ์คืนชีพ</p>
+              <p><i class="fa-solid fa-trophy text-amber-400 mr-2"></i>ผู้เหลือรอดคนสุดท้ายคือสุดยอดผู้พิทักษ์ประชาธิปไตย</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-8 text-sm text-gray-400 animate-pulse">
+          <i class="fa-solid fa-spinner fa-spin mr-2"></i> รอเจ้าหน้าที่เปิดสัญญาณเริ่มคำถามรอบแรก...
+        </div>
+      </div>
+
+      <!-- Stage State: QUESTION ACTIVE -->
+      <div id="proj-stage-question" class="hidden flex-1 flex flex-col justify-between">
+        <!-- Question Meta & Giant Timer -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-arena-900/80 border border-arena-700/80 rounded-2xl p-4 md:p-6 mb-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span id="proj-q-round" class="px-3 py-1 rounded-md text-xs font-extrabold bg-amber-500 text-black uppercase">ROUND 1</span>
+              <span class="text-xs font-bold text-gray-400">คำถามที่ <span id="proj-q-num">1</span> จากทั้งหมด 14 ข้อ</span>
+            </div>
+            <h2 id="proj-q-text" class="text-xl md:text-3xl font-extrabold text-white leading-snug">
+              ข้อใดคือหลักการสำคัญที่สุดของระบอบประชาธิปไตยตามหลักการสากล?
+            </h2>
+          </div>
+
+          <!-- Giant Countdown Badge -->
+          <div class="flex flex-col items-center justify-center shrink-0">
+            <div id="proj-timer-circle" class="w-20 h-20 md:w-28 md:h-28 rounded-full border-4 border-amber-400 flex items-center justify-center bg-arena-950 shadow-lg shadow-amber-500/20">
+              <span id="proj-timer-num" class="font-mono font-black text-3xl md:text-5xl text-amber-400">15</span>
+            </div>
+            <span class="text-[10px] font-bold text-gray-400 uppercase mt-1">COUNTDOWN</span>
+          </div>
+        </div>
+
+        <!-- 4 Choices Grid (Big for auditorium readability) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 my-auto">
+          <!-- A -->
+          <div id="proj-card-opt-0" class="proj-choice-card bg-arena-900 border-2 border-red-500/50 rounded-2xl p-4 md:p-6 flex items-center gap-4 transition-all duration-300">
+            <span class="w-12 h-12 md:w-16 md:h-16 rounded-xl bg-red-500 text-white font-black font-display text-2xl md:text-3xl flex items-center justify-center shrink-0 shadow">A</span>
+            <div class="flex-1">
+              <p id="proj-text-opt-0" class="text-base md:text-xl font-bold text-gray-100">อำนาจอธิปไตยเป็นของประชาชน</p>
+              <div id="proj-stat-opt-0" class="hidden text-xs font-bold text-gray-400 mt-1">ผู้เลือก: 0 คน</div>
+            </div>
+          </div>
+          <!-- B -->
+          <div id="proj-card-opt-1" class="proj-choice-card bg-arena-900 border-2 border-blue-500/50 rounded-2xl p-4 md:p-6 flex items-center gap-4 transition-all duration-300">
+            <span class="w-12 h-12 md:w-16 md:h-16 rounded-xl bg-blue-500 text-white font-black font-display text-2xl md:text-3xl flex items-center justify-center shrink-0 shadow">B</span>
+            <div class="flex-1">
+              <p id="proj-text-opt-1" class="text-base md:text-xl font-bold text-gray-100">การมีผู้นำที่มีอำนาจเด็ดขาดสูงสุด</p>
+              <div id="proj-stat-opt-1" class="hidden text-xs font-bold text-gray-400 mt-1">ผู้เลือก: 0 คน</div>
+            </div>
+          </div>
+          <!-- C -->
+          <div id="proj-card-opt-2" class="proj-choice-card bg-arena-900 border-2 border-amber-500/50 rounded-2xl p-4 md:p-6 flex items-center gap-4 transition-all duration-300">
+            <span class="w-12 h-12 md:w-16 md:h-16 rounded-xl bg-amber-500 text-white font-black font-display text-2xl md:text-3xl flex items-center justify-center shrink-0 shadow">C</span>
+            <div class="flex-1">
+              <p id="proj-text-opt-2" class="text-base md:text-xl font-bold text-gray-100">การตัดสินใจโดยกลุ่มทุนทางเศรษฐกิจ</p>
+              <div id="proj-stat-opt-2" class="hidden text-xs font-bold text-gray-400 mt-1">ผู้เลือก: 0 คน</div>
+            </div>
+          </div>
+          <!-- D -->
+          <div id="proj-card-opt-3" class="proj-choice-card bg-arena-900 border-2 border-emerald-500/50 rounded-2xl p-4 md:p-6 flex items-center gap-4 transition-all duration-300">
+            <span class="w-12 h-12 md:w-16 md:h-16 rounded-xl bg-emerald-500 text-white font-black font-display text-2xl md:text-3xl flex items-center justify-center shrink-0 shadow">D</span>
+            <div class="flex-1">
+              <p id="proj-text-opt-3" class="text-base md:text-xl font-bold text-gray-100">การยกเลิกการบังคับใช้กฎหมายทุกชนิด</p>
+              <div id="proj-stat-opt-3" class="hidden text-xs font-bold text-gray-400 mt-1">ผู้เลือก: 0 คน</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Submission Monitor Progress Bar -->
+        <div class="mt-4 bg-arena-900/90 border border-arena-700/80 rounded-2xl p-3 flex items-center justify-between gap-4">
+          <div class="text-xs font-bold text-gray-400">
+            ผู้ส่งคำตอบแล้ว: <span id="proj-submitted-count" class="text-amber-400 font-mono text-base font-bold">0</span> / <span id="proj-active-survivors">0</span> คน
+          </div>
+          <div class="w-1/2 bg-arena-950 rounded-full h-3 overflow-hidden border border-arena-800">
+            <div id="proj-submitted-progress" class="bg-gradient-to-r from-amber-500 to-yellow-400 h-full w-0 transition-all duration-300"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stage State: ANSWER REVEAL & CIVIC EXPLANATION -->
+      <div id="proj-stage-reveal" class="hidden flex-1 flex flex-col justify-between">
+        <div class="bg-gradient-to-r from-emerald-950/80 via-arena-900/90 to-emerald-950/80 border-2 border-emerald-500 rounded-3xl p-6 md:p-8 shadow-2xl mb-4">
+          <div class="flex items-center gap-3 text-emerald-400 font-extrabold text-sm md:text-base uppercase tracking-wider mb-2">
+            <i class="fa-solid fa-circle-check text-2xl"></i> คำตอบที่ถูกต้องคือ:
+          </div>
+          <h2 id="proj-reveal-correct-title" class="text-2xl md:text-4xl font-black font-display text-white mb-4">
+            A: อำนาจอธิปไตยเป็นของประชาชน
+          </h2>
+
+          <!-- Civic Knowledge Card (1-2 sentences) -->
+          <div class="bg-arena-950/80 border border-emerald-500/40 rounded-2xl p-4 md:p-6 text-gray-200">
+            <div class="text-xs font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-1.5">
+              <i class="fa-solid fa-graduation-cap text-base"></i> สาระความรู้เพื่อเยาวชน (Civic Education):
+            </div>
+            <p id="proj-reveal-explanation" class="text-sm md:text-lg leading-relaxed text-gray-100">
+              อำนาจอธิปไตยเป็นอำนาจสูงสุดในการปกครองประเทศ โดยรัฐธรรมนูญแห่งราชอาณาจักรไทยบัญญัติให้อำนาจอธิปไตยเป็นของปวงชนชาวไทย โดยพระมหากษัตริย์ผู้ทรงเป็นประมุขทรงใช้อำนาจนั้นทางรัฐสภา คณะรัฐมนตรี และศาล
+            </p>
+          </div>
+        </div>
+
+        <!-- Round Casualty Report -->
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+          <div class="bg-emerald-900/30 border border-emerald-500/40 rounded-2xl p-4 text-center">
+            <span class="text-xs font-bold text-emerald-400">ตอบถูกในข้อนี้</span>
+            <div id="proj-round-correct-cnt" class="text-3xl font-black text-emerald-400 font-mono">0</div>
+          </div>
+          <div class="bg-red-900/30 border border-red-500/40 rounded-2xl p-4 text-center">
+            <span class="text-xs font-bold text-red-400">ตอบผิด / ไม่ทัน (เสีย 1 ชีวิต)</span>
+            <div id="proj-round-wrong-cnt" class="text-3xl font-black text-red-400 font-mono">0</div>
+          </div>
+          <div class="col-span-2 md:col-span-1 bg-red-950/80 border-2 border-red-600 rounded-2xl p-4 text-center">
+            <span class="text-xs font-bold text-red-300">ตกรอบในข้อนี้ทันที</span>
+            <div id="proj-round-new-eliminated-cnt" class="text-3xl font-black text-red-500 font-mono">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stage State: FINAL LEADERBOARD & RANKING -->
+      <div id="proj-stage-ranking" class="hidden flex-1 flex flex-col justify-between">
+        <div class="text-center mb-4">
+          <div class="inline-block p-3 rounded-full bg-amber-500/20 text-amber-400 text-2xl mb-1">
+            <i class="fa-solid fa-trophy"></i>
+          </div>
+          <h2 class="text-3xl md:text-5xl font-black font-display text-white">ทำเนียบผู้รอดชีวิตสูงสุด (SURVIVOR HALL OF FAME)</h2>
+          <p class="text-xs md:text-sm text-gray-400">จัดอันดับตาม: ชีวิตที่เหลืออยู่ > จำนวนข้อที่ถูก > ความเร็วในการตอบ</p>
+        </div>
+
+        <!-- Leaderboard Table / Cards -->
+        <div class="bg-arena-900/90 border border-arena-700/80 rounded-2xl p-4 overflow-y-auto max-h-[460px]">
+          <div id="proj-ranking-list" class="space-y-2">
+            <!-- Dynamic populated via JS -->
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- 3. ADMIN / HOST CONTROL SCREEN                                          -->
+  <!-- ========================================================================= -->
+  <main id="view-admin" class="hidden flex-1 max-w-7xl mx-auto w-full p-4 md:p-6 space-y-6">
+    
+    <!-- Admin Top Header Control -->
+    <div class="bg-arena-900/90 border border-arena-700/80 rounded-2xl p-4 md:p-6 shadow-xl flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <span class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-400 text-xs font-bold uppercase tracking-wider">Host Control Panel</span>
+        <h2 class="text-2xl font-black font-display text-white mt-1">แผงควบคุมเกมของผู้ดูแลระบบ</h2>
+        <p class="text-xs text-gray-400">ควบคุมขั้นตอนทั้งหมดแบบ Manual เพื่อความยืดหยุ่นในการจัดกิจกรรม</p>
+      </div>
+
+      <!-- Quick Action Buttons -->
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="adminResetGame()" class="px-4 py-2 rounded-xl text-xs font-bold bg-red-950 border border-red-700 text-red-300 hover:bg-red-900 transition">
+          <i class="fa-solid fa-rotate-left mr-1"></i> รีเซ็ตเกมใหม่
+        </button>
+        <button onclick="adminSimulatePlayers(200)" class="px-4 py-2 rounded-xl text-xs font-bold bg-purple-900/80 border border-purple-600 text-purple-200 hover:bg-purple-800 transition">
+          <i class="fa-solid fa-robot mr-1"></i> จำลอง 200 บอท (Stress Test)
+        </button>
+      </div>
+    </div>
+
+    <!-- Game Step Workflow Bar (Step-by-step game progression) -->
+    <div class="bg-arena-900/90 border border-arena-700/80 rounded-2xl p-4 md:p-6">
+      <h3 class="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-circle-nodes text-amber-400"></i> ลำดับการควบคุมคำถามปัจจุบัน
+      </h3>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <!-- Step 1: Open Question -->
+        <button onclick="adminTriggerQuestion()" id="adm-btn-open" class="p-4 rounded-xl text-left bg-arena-800 hover:bg-arena-700 border border-arena-600 font-bold text-white transition flex flex-col justify-between h-28">
+          <span class="text-xs text-amber-400">ขั้นตอนที่ 1</span>
+          <span class="text-base font-display">เปิดคำถาม & เริ่มนับเวลา</span>
+          <i class="fa-solid fa-play text-xl self-end text-amber-400"></i>
+        </button>
+
+        <!-- Step 2: Lock Answers -->
+        <button onclick="adminLockAnswers()" id="adm-btn-lock" class="p-4 rounded-xl text-left bg-arena-800 hover:bg-arena-700 border border-arena-600 font-bold text-white transition flex flex-col justify-between h-28">
+          <span class="text-xs text-red-400">ขั้นตอนที่ 2</span>
+          <span class="text-base font-display">ปิดรับคำตอบทันที</span>
+          <i class="fa-solid fa-lock text-xl self-end text-red-400"></i>
+        </button>
+
+        <!-- Step 3: Reveal Answer -->
+        <button onclick="adminRevealAnswer()" id="adm-btn-reveal" class="p-4 rounded-xl text-left bg-arena-800 hover:bg-arena-700 border border-arena-600 font-bold text-white transition flex flex-col justify-between h-28">
+          <span class="text-xs text-emerald-400">ขั้นตอนที่ 3</span>
+          <span class="text-base font-display">แสดงเฉลย & ตัดชีวิต</span>
+          <i class="fa-solid fa-check-double text-xl self-end text-emerald-400"></i>
+        </button>
+
+        <!-- Step 4: Next Question / Ranking -->
+        <button onclick="adminNextQuestion()" id="adm-btn-next" class="p-4 rounded-xl text-left bg-arena-800 hover:bg-arena-700 border border-arena-600 font-bold text-white transition flex flex-col justify-between h-28">
+          <span class="text-xs text-blue-400">ขั้นตอนที่ 4</span>
+          <span class="text-base font-display">ข้อถัดไป / แสดงตาราง</span>
+          <i class="fa-solid fa-forward-step text-xl self-end text-blue-400"></i>
+        </button>
+      </div>
+
+      <!-- Current Question Quick Info & Timer Adjuster -->
+      <div class="mt-4 p-3 bg-arena-950 rounded-xl border border-arena-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-2">
+          <span class="text-gray-400">ข้อปัจจุบัน:</span>
+          <span id="adm-current-q-index" class="font-bold text-amber-400 text-sm">1 / 14</span>
+          <span id="adm-current-q-title" class="text-gray-300 truncate max-w-xs md:max-w-md">ความรู้พื้นฐานประชาธิปไตย</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <label class="text-gray-400">เวลาตอบข้อนี้:</label>
+          <select id="adm-timer-select" class="bg-arena-900 border border-arena-700 rounded-lg px-2 py-1 text-white font-bold">
+            <option value="15">15 วินาที</option>
+            <option value="20" selected>20 วินาที</option>
+            <option value="30">30 วินาที</option>
+            <option value="45">45 วินาที</option>
+          </select>
+          <button onclick="adminShowLeaderboard()" class="px-3 py-1 rounded-lg bg-yellow-500/20 text-yellow-300 font-bold hover:bg-yellow-500/30 border border-yellow-500/40">
+            <i class="fa-solid fa-trophy mr-1"></i> เปิดดู Ranking ทันที
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Question Management Section (CRUD & JSON Import/Export) -->
+    <div class="bg-arena-900/90 border border-arena-700/80 rounded-2xl p-4 md:p-6">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <h3 class="text-lg font-bold font-display text-white flex items-center gap-2">
+            <i class="fa-solid fa-list-check text-amber-400"></i> คลังคำถามและเฉลย (14 ข้อ 5 รอบ)
+          </h3>
+          <p class="text-xs text-gray-400">สามารถแก้ไข เพิ่ม ลบ หรือนำเข้า/ส่งออกไฟล์ JSON ได้อย่างอิสระ</p>
+        </div>
+
+        <div class="flex items-center gap-2 text-xs">
+          <button onclick="exportQuestionsJSON()" class="px-3 py-1.5 rounded-lg bg-arena-800 border border-arena-600 text-gray-200 hover:text-white">
+            <i class="fa-solid fa-download mr-1"></i> Export JSON
+          </button>
+          <label class="px-3 py-1.5 rounded-lg bg-arena-800 border border-arena-600 text-gray-200 hover:text-white cursor-pointer">
+            <i class="fa-solid fa-upload mr-1"></i> Import JSON
+            <input type="file" id="adm-import-file" accept=".json" onchange="importQuestionsJSON(event)" class="hidden" />
+          </label>
+          <button onclick="openAddQuestionModal()" class="px-3 py-1.5 rounded-lg bg-amber-500 text-black font-bold hover:bg-amber-400">
+            <i class="fa-solid fa-plus mr-1"></i> เพิ่มคำถาม
+          </button>
+        </div>
+      </div>
+
+      <!-- Question List Accordion -->
+      <div id="adm-questions-table" class="space-y-2 max-h-80 overflow-y-auto pr-1">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <!-- Live Players Live Table (Monitoring 200 Players) -->
+    <div class="bg-arena-900/90 border border-arena-700/80 rounded-2xl p-4 md:p-6">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <h3 class="text-lg font-bold font-display text-white flex items-center gap-2">
+            <i class="fa-solid fa-users-viewfinder text-amber-400"></i> รายชื่อผู้เข้าแข่งขันแบบ Real-time
+          </h3>
+          <p class="text-xs text-gray-400">ระบบตรวจสอบสถานะชีวิตและคะแนนของผู้เล่นทุกคน</p>
+        </div>
+
+        <div class="text-xs flex items-center gap-3">
+          <span class="text-emerald-400"><i class="fa-solid fa-heart"></i> 2 ชีวิต: <b id="adm-stat-2life">0</b></span>
+          <span class="text-amber-400"><i class="fa-solid fa-heart-crack"></i> 1 ชีวิต: <b id="adm-stat-1life">0</b></span>
+          <span class="text-red-500"><i class="fa-solid fa-skull"></i> ตกรอบ: <b id="adm-stat-elim">0</b></span>
+        </div>
+      </div>
+
+      <!-- Player grid filter/search -->
+      <div class="mb-3 flex items-center gap-2">
+        <input type="text" id="adm-player-search" oninput="renderAdminPlayers()" placeholder="ค้นหาชื่อผู้เล่น..." class="w-full md:w-64 bg-arena-950 border border-arena-700 text-xs text-white rounded-lg px-3 py-2" />
+        <button onclick="adminKickDeadPlayers()" class="px-3 py-2 rounded-lg bg-arena-800 text-gray-400 hover:text-white text-xs border border-arena-700 whitespace-nowrap">
+          ล้างผู้ตกรอบออก
+        </button>
+      </div>
+
+      <!-- Responsive Table -->
+      <div class="overflow-x-auto border border-arena-800 rounded-xl max-h-72">
+        <table class="w-full text-left text-xs text-gray-300">
+          <thead class="bg-arena-950 text-gray-400 uppercase font-semibold">
+            <tr>
+              <th class="p-3">#</th>
+              <th class="p-3">ชื่อผู้เล่น</th>
+              <th class="p-3">ชีวิตที่เหลือ</th>
+              <th class="p-3">คำตอบข้อนี้</th>
+              <th class="p-3">คะแนนรวม</th>
+              <th class="p-3">สถานะ</th>
+            </tr>
+          </thead>
+          <tbody id="adm-player-tbody" class="divide-y divide-arena-800">
+            <!-- Rendered by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: ADD / EDIT QUESTION                                                -->
+  <!-- ========================================================================= -->
+  <div id="modal-question" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-arena-900 border border-arena-700 rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-arena-800 pb-3">
+        <h3 id="modal-q-title" class="text-lg font-bold font-display text-white">แก้ไขคำถาม</h3>
+        <button onclick="closeQuestionModal()" class="text-gray-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <form id="form-question-edit" onsubmit="handleSaveQuestion(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="edit-q-id" />
+        
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-gray-400 font-semibold mb-1">รอบ (Round)</label>
+            <select id="edit-q-round" class="w-full bg-arena-950 border border-arena-700 rounded-lg p-2 text-white">
+              <option value="ROUND 1: THE BEGINNING">ROUND 1: THE BEGINNING</option>
+              <option value="ROUND 2: RIGHTS & FREEDOM">ROUND 2: RIGHTS & FREEDOM</option>
+              <option value="ROUND 3: POWER & AUTHORITY">ROUND 3: POWER & AUTHORITY</option>
+              <option value="ROUND 4: THE CRISIS">ROUND 4: THE CRISIS</option>
+              <option value="ROUND 5: FINAL SURVIVAL">ROUND 5: FINAL SURVIVAL</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-gray-400 font-semibold mb-1">ระดับความยาก</label>
+            <select id="edit-q-difficulty" class="w-full bg-arena-950 border border-arena-700 rounded-lg p-2 text-white">
+              <option value="Normal">Normal</option>
+              <option value="Medium">Medium</option>
+              <option value="Hard">Hard</option>
+              <option value="Survival Nightmare">Survival Nightmare</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-gray-400 font-semibold mb-1">ข้อความคำถาม</label>
+          <textarea id="edit-q-prompt" rows="2" required class="w-full bg-arena-950 border border-arena-700 rounded-lg p-2 text-white"></textarea>
+        </div>
+
+        <div class="space-y-2">
+          <label class="block text-gray-400 font-semibold">ตัวเลือกทั้ง 4 ข้อ (A, B, C, D)</label>
+          <div class="flex items-center gap-2">
+            <span class="w-6 font-bold text-red-400">A:</span>
+            <input type="text" id="edit-opt-0" required class="flex-1 bg-arena-950 border border-arena-700 rounded-lg p-2 text-white" />
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-6 font-bold text-blue-400">B:</span>
+            <input type="text" id="edit-opt-1" required class="flex-1 bg-arena-950 border border-arena-700 rounded-lg p-2 text-white" />
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-6 font-bold text-amber-400">C:</span>
+            <input type="text" id="edit-opt-2" required class="flex-1 bg-arena-950 border border-arena-700 rounded-lg p-2 text-white" />
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-6 font-bold text-emerald-400">D:</span>
+            <input type="text" id="edit-opt-3" required class="flex-1 bg-arena-950 border border-arena-700 rounded-lg p-2 text-white" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-gray-400 font-semibold mb-1">คำตอบที่ถูกต้อง</label>
+          <select id="edit-q-correct" class="w-full bg-arena-950 border border-arena-700 rounded-lg p-2 text-emerald-400 font-bold">
+            <option value="0">A</option>
+            <option value="1">B</option>
+            <option value="2">C</option>
+            <option value="3">D</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-gray-400 font-semibold mb-1">คำอธิบายความรู้สั้นๆ (1-2 ประโยคสำหรับเฉลย)</label>
+          <textarea id="edit-q-explanation" rows="2" required class="w-full bg-arena-950 border border-arena-700 rounded-lg p-2 text-white"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeQuestionModal()" class="px-4 py-2 rounded-lg bg-arena-800 text-gray-300">ยกเลิก</button>
+          <button type="submit" class="px-4 py-2 rounded-lg bg-amber-500 font-bold text-black hover:bg-amber-400">บันทึกคำถาม</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Notification Toast Modal (No native alert) -->
+  <div id="custom-toast" class="fixed bottom-4 right-4 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none bg-arena-900 border border-amber-500/50 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
+    <i id="toast-icon" class="fa-solid fa-circle-info text-amber-400 text-lg"></i>
+    <span id="toast-msg" class="text-xs font-semibold">การแจ้งเตือน</span>
+  </div>
+
+  <!-- Sound FX Synthesizer (Web Audio API - No external audio link dependencies) -->
+  <script>
+    const AudioEngine = {
+      ctx: null,
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+      },
+      playTick() {
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+          gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.08);
+        } catch (e) {}
+      },
+      playEliminated() {
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(260, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.6);
+          gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.6);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.6);
+        } catch (e) {}
+      },
+      playCorrect() {
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime;
+          [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+            gain.gain.setValueAtTime(0.2, now + idx * 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.3);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + idx * 0.08);
+            osc.stop(now + idx * 0.08 + 0.3);
+          });
+        } catch (e) {}
+      }
+    };
+  </script>
+
+  <!-- ========================================================================= -->
+  <!-- MAIN JAVASCRIPT APPLICATION CORE                                          -->
+  <!-- ========================================================================= -->
+  <script>
+    /**
+     * SURVIVAL QUIZ ENGINE (Real-Time Synchronizer & State Manager)
+     * Supports 200 concurrent players, BroadcastChannel sync for multi-tab/screen
+     */
+    
+    // Default 14 Curated Questions across 5 Rounds (Democracy & Parliament)
+    const DEFAULT_QUESTIONS = [
+      // ROUND 1: THE BEGINNING
+      {
+        id: "q1",
+        round: "ROUND 1: THE BEGINNING",
+        difficulty: "Normal",
+        prompt: "ตามระบอบประชาธิปไตยอันมีพระมหากษัตริย์ทรงเป็นประมุข อำนาจอธิปไตยเป็นของใคร?",
+        options: [
+          "ปวงชนชาวไทย",
+          "นายกรัฐมนตรีและคณะรัฐมนตรี",
+          "สมาชิกสภาผู้แทนราษฎร",
+          "ข้าราชการประจำ"
+        ],
+        correct: 0,
+        explanation: "รัฐธรรมนูญระบุชัดเจนว่า 'อำนาจอธิปไตยเป็นของปวงชนชาวไทย' โดยพระมหากษัตริย์ทรงใช้อำนาจนั้นผ่านรัฐสภา คณะรัฐมนตรี และศาล"
+      },
+      {
+        id: "q2",
+        round: "ROUND 1: THE BEGINNING",
+        difficulty: "Normal",
+        prompt: "หลักการแบ่งแยกอำนาจ (Separation of Powers) แบ่งอำนาจอธิปไตยออกเป็น 3 ฝ่าย คือข้อใด?",
+        options: [
+          "ฝ่ายทหาร ฝ่ายพลเรือน ฝ่ายปกครอง",
+          "ฝ่ายนิติบัญญัติ ฝ่ายบริหาร ฝ่ายตุลาการ",
+          "ฝ่ายรัฐบาล ฝ่ายค้าน ฝ่ายประชาชน",
+          "ฝ่ายส่วนกลาง ฝ่ายส่วนภูมิภาค ฝ่ายท้องถิ่น"
+        ],
+        correct: 1,
+        explanation: "อำนาจอธิปไตยแบ่งเป็น 3 เสาหลัก: นิติบัญญัติ (ออกกฎหมาย), บริหาร (บริหารประเทศ), และตุลาการ (พิจารณาคดีความ) เพื่อคานอำนาจกัน"
+      },
+      {
+        id: "q3",
+        round: "ROUND 1: THE BEGINNING",
+        difficulty: "Normal",
+        prompt: "การปกครองระบอบประชาธิปไตยให้ความสำคัญกับหลักการใดมากที่สุด?",
+        options: [
+          "การตัดสินใจของผู้นำโดยไม่ต้องปรึกษาใคร",
+          "การใช้กำลังบังคับเพื่อความสงบเรียบร้อย",
+          "หลักนิติธรรม และความเสมอภาคของบุคคลตามกฎหมาย",
+          "การให้สิทธิเฉพาะผู้มีความรู้สูงในการออกเสียง"
+        ],
+        correct: 2,
+        explanation: "หลักนิติธรรม (Rule of Law) และความเสมอภาคต่อหน้ากฎหมายเป็นรากฐานที่คุ้มครองทุกคนอย่างเท่าเทียม"
+      },
+
+      // ROUND 2: RIGHTS & FREEDOM
+      {
+        id: "q4",
+        round: "ROUND 2: RIGHTS & FREEDOM",
+        difficulty: "Medium",
+        prompt: "สิทธิในการเลือกตั้งของประชาชนไทยตามรัฐธรรมนูญ ถือเป็นสิ่งใดทางกฎหมาย?",
+        options: [
+          "เป็นสิทธิและหน้าที่ของปวงชนชาวไทย",
+          "เป็นสิทธิที่ทำหรือไม่ทำก็ได้โดยไม่มีผลกระทบ",
+          "เป็นข้อบังคับที่มีโทษจำคุกหากไม่ไปใช้สิทธิ",
+          "เป็นสิทธิเฉพาะผู้มีทรัพย์สินตามเกณฑ์"
+        ],
+        correct: 0,
+        explanation: "การไปใช้สิทธิเลือกตั้งเป็นทั้ง 'สิทธิ' และ 'หน้าที่' ของปวงชนชาวไทย หากไม่ไปใช้สิทธิโดยไม่แจ้งเหตุจะถูกจำกัดสิทธิบางประการทางการเมือง"
+      },
+      {
+        id: "q5",
+        round: "ROUND 2: RIGHTS & FREEDOM",
+        difficulty: "Medium",
+        prompt: "เสรีภาพในการแสดงความคิดเห็นตามระบอบประชาธิปไตย มีขอบเขตจำกัดอย่างไร?",
+        options: [
+          "ไม่มีขอบเขต สามารถพูดใส่ร้ายผู้อื่นได้เต็มที่",
+          "ต้องไม่ละเมิดสิทธิเสรีภาพของผู้อื่น และไม่ขัดต่อกฎหมายความมั่นคง",
+          "ต้องได้รับอนุญาตจากเจ้าหน้าที่รัฐเป็นลายลักษณ์อักษรก่อนพูดเสมอ",
+          "จำกัดเฉพาะในสื่อสิ่งพิมพ์เท่านั้น"
+        ],
+        correct: 1,
+        explanation: "เสรีภาพในการพูดและแสดงออกมีได้ตราบใดที่ไม่ละเมิดสิทธิ ชื่อเสียง และความปลอดภัยของผู้อื่น"
+      },
+      {
+        id: "q6",
+        round: "ROUND 2: RIGHTS & FREEDOM",
+        difficulty: "Medium",
+        prompt: "พลเมืองผู้มีสิทธิเลือกตั้ง ต้องมีอายุไม่ต่ำกว่ากี่ปีในวันเลือกตั้ง?",
+        options: [
+          "17 ปีบริบูรณ์",
+          "18 ปีบริบูรณ์",
+          "20 ปีบริบูรณ์",
+          "25 ปีบริบูรณ์"
+        ],
+        correct: 1,
+        explanation: "บุคคลผู้มีสิทธิเลือกตั้งต้องมีสัญชาติไทย และมีอายุไม่ต่ำกว่า 18 ปีบริบูรณ์ในวันเลือกตั้ง"
+      },
+
+      // ROUND 3: POWER & AUTHORITY
+      {
+        id: "q7",
+        round: "ROUND 3: POWER & AUTHORITY",
+        difficulty: "Medium",
+        prompt: "รัฐสภาของประเทศไทยตามโครงสร้างปัจจุบัน ประกอบด้วยสภาใดบ้าง?",
+        options: [
+          "สภาผู้แทนราษฎร และ วุฒิสภา",
+          "สภาผู้แทนราษฎร และ คณะรัฐมนตรี",
+          "สภาประชาชน และ สภาขับเคลื่อนการปฏิรูป",
+          "สภากลาโหม และ สภาความมั่นคงแห่งชาติ"
+        ],
+        correct: 0,
+        explanation: "รัฐสภาไทยเป็นระบบสองสภา (Bicameral) ประกอบด้วย 'สภาผู้แทนราษฎร' (ส.ส.) และ 'วุฒิสภา' (ส.ว.)"
+      },
+      {
+        id: "q8",
+        round: "ROUND 3: POWER & AUTHORITY",
+        difficulty: "Hard",
+        prompt: "กลไกใดของรัฐสภาที่ใช้สำหรับตรวจสอบและถ่วงดุลฝ่ายบริหารอย่างเข้มข้นที่สุด?",
+        options: [
+          "การแถลงข่าวนอกสภา",
+          "การเปิดอภิปรายไม่ไว้วางใจนายกรัฐมนตรีหรือรัฐมนตรี",
+          "การชุมนุมประท้วงของสมาชิกสภา",
+          "การยื่นฟ้องต่อศาลแพ่ง"
+        ],
+        correct: 1,
+        explanation: "การเปิดอภิปรายทั่วไปเพื่อลงมติไม่ไว้วางใจ (Vote of No Confidence) เป็นกลไกหลักในการตรวจสอบและอาจทำให้รัฐมนตรีพ้นจากตำแหน่งได้"
+      },
+      {
+        id: "q9",
+        round: "ROUND 3: POWER & AUTHORITY",
+        difficulty: "Hard",
+        prompt: "ร่างพระราชบัญญัติ (พ.ร.บ.) โดยทั่วไปจะเริ่มเข้าสู่การพิจารณาวาระที่ 1 ในสภาใดก่อน?",
+        options: [
+          "วุฒิสภา",
+          "สภาผู้แทนราษฎร",
+          "ศาลรัฐธรรมนูญ",
+          "คณะกรรมการการเลือกตั้ง (กกต.)"
+        ],
+        correct: 1,
+        explanation: "ร่างกฎหมายทั่วไปจะต้องเสนอและพิจารณาโดย 'สภาผู้แทนราษฎร' ซึ่งมาจากการเลือกตั้งของประชาชนโดยตรงก่อนส่งต่อให้วุฒิสภา"
+      },
+
+      // ROUND 4: THE CRISIS
+      {
+        id: "q10",
+        round: "ROUND 4: THE CRISIS",
+        difficulty: "Hard",
+        prompt: "สถานการณ์จำลอง: รัฐบาลเสนอร่างกฎหมายงบประมาณรายจ่าย แต่สภาผู้แทนราษฎรลงมติ 'ไม่อนุมัติ' รัฐบาลควรทำอย่างไรตามธรรมเนียม?",
+        options: [
+          "จับกุมสมาชิกสภาผู้แทนราษฎรที่โหวตสวน",
+          "ลาออกทั้งคณะ หรือประกาศยุบสภาเพื่อให้ประชาชนเลือกตั้งใหม่",
+          "ออกเป็นคำสั่งส่วนตัวโดยไม่ต้องผ่านสภา",
+          "ยกเลิกการจ่ายเงินเดือนแก่ประชาชน"
+        ],
+        correct: 1,
+        explanation: "ตามหลักความรับผิดชอบร่วม หากสภาไม่อนุมัติกฎหมายการเงินสำคัญ นายกฯ ต้องแสดงความรับผิดชอบด้วยการลาออกหรือยุบสภา"
+      },
+      {
+        id: "q11",
+        round: "ROUND 4: THE CRISIS",
+        difficulty: "Hard",
+        prompt: "หากประชาชนผู้มีสิทธิเลือกตั้งต้องการเสนอร่างกฎหมายด้วยตนเอง รัฐธรรมนูญไทยเปิดโอกาสให้เข้าชื่อกี่คน?",
+        options: [
+          "ไม่น้อยกว่า 10,000 คน",
+          "ไม่น้อยกว่า 50,000 คน",
+          "ไม่น้อยกว่า 100,000 คน",
+          "ประชาชนไม่มีสิทธิเสนอร่างกฎหมาย"
+        ],
+        correct: 0,
+        explanation: "ประชาชนผู้มีสิทธิเลือกตั้งไม่น้อยกว่า 10,000 คน มีสิทธิเข้าชื่อเสนอกฎหมายในหมวดหน้าที่ของปวงชนชาวไทยหรือหมวดสิทธิเสรีภาพได้"
+      },
+      {
+        id: "q12",
+        round: "ROUND 4: THE CRISIS",
+        difficulty: "Survival Nightmare",
+        prompt: "การรับฟังความคิดเห็นของผู้มีส่วนได้เสีย (Public Hearing) ก่อนการออกกฎหมาย มีความสำคัญต่อระบอบประชาธิปไตยอย่างไร?",
+        options: [
+          "เป็นเพียงพิธีการสร้างภาพ ไม่มีความหมายทางกฎหมาย",
+          "ช่วยให้กฎหมายตอบโจทย์ สอดคล้องกับความเป็นจริง และสะท้อนเสียงผู้ได้รับผลกระทบ",
+          "มีไว้เพื่อให้บริษัทเอกชนเข้ามาผูกขาดสัมปทาน",
+          "ชะลอไม่ให้กฎหมายบังคับใช้ได้จริงตลอดไป"
+        ],
+        correct: 1,
+        explanation: "Public Hearing ส่งเสริมประชาธิปไตยแบบมีส่วนร่วม (Participatory Democracy) ทำให้กฎหมายชอบธรรมและรอบด้าน"
+      },
+
+      // ROUND 5: FINAL SURVIVAL
+      {
+        id: "q13",
+        round: "ROUND 5: FINAL SURVIVAL",
+        difficulty: "Survival Nightmare",
+        prompt: "คำว่า 'ประชาธิปไตยแบบปรึกษาหารือ' (Deliberative Democracy) มุ่งเน้นกระบวนการใดเป็นสำคัญที่สุด?",
+        options: [
+          "การยกมือโหวตเอาชนะกันด้วยเสียงข้างมากโดยไม่ต้องพูดคุย",
+          "การแลกเปลี่ยนเหตุผลอย่างเท่าเทียมและเปิดกว้าง เพื่อหาฉันทามติร่วมกัน",
+          "การรอฟังคำสั่งจากผู้มีอำนาจสูงสุดในพรรคการเมือง",
+          "การใช้วิธีจับสลากเลือกนโยบายสาธารณะ"
+        ],
+        correct: 1,
+        explanation: "Deliberative Democracy เน้นการใช้เหตุผล การรับฟังข้อกังวลอย่างลึกซึ้ง ไม่ใช่เพียงการโหวตหักด้ามพร้าด้วยกำลังเสียง"
+      },
+      {
+        id: "q14",
+        round: "ROUND 5: FINAL SURVIVAL",
+        difficulty: "Survival Nightmare",
+        prompt: "หัวใจของการเป็น 'พลเมืองที่ตื่นรู้' (Active Citizen) ในสังคมประชาธิปไตยคือข้อใด?",
+        options: [
+          "รอคอยความช่วยเหลือจากรัฐบาลเพียงฝ่ายเดียว",
+          "มีส่วนร่วม ตรวจสอบอำนาจรัฐ เคารพสิทธิผู้อื่น และร่วมแก้ปัญหาสาธารณะ",
+          "แชร์ข่าวสารในโซเชียลมีเดียโดยไม่ต้องตรวจสอบความถูกต้อง",
+          "ไม่สนใจการเมืองเพราะคิดว่าเป็นเรื่องไกลตัว"
+        ],
+        correct: 1,
+        explanation: "Active Citizen คือพลังขับเคลื่อนที่สำคัญที่สุดของประชาธิปไตย โดยไม่นิ่งเฉยต่อความอยุติธรรมและเคารพกฎกติกาของสังคม"
+      }
+    ];
+
+    // Core Game State Model
+    let GameData = {
+      pin: "2026",
+      status: "LOBBY", // LOBBY, QUESTION, LOCKED, REVEAL, RANKING
+      currentQIndex: 0,
+      timer: 20,
+      totalTime: 20,
+      roundStats: { correct: 0, wrong: 0, eliminated: 0 },
+      questions: JSON.parse(JSON.stringify(DEFAULT_QUESTIONS)),
+      players: [] // Array of { id, name, lives: 2, eliminated: false, answers: {}, score: 0, totalTimeTaken: 0 }
+    };
+
+    // =========================================================================
+    // SUPABASE CONFIG  (ใส่ค่าจาก Supabase > Project Settings > API)
+    // =========================================================================
+    const SUPABASE_URL = 'https://sb_publishable_7KUuKB11yyzIjLfMZEOJCQ_sCh5Qo5h.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2ZmVkYXZtdmt0Zmtyd3hic2lmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM3NTcxOTksImV4cCI6MjEwOTMzMzE5OX0.hcBe7fDRgB0-3CFWE5hb2QZMYIRel0cO0aFO9fIE7V8';
+    const ROOM = 'survival-quiz-room';      // ชื่อห้อง (เปลี่ยนได้ ถ้าหลายห้องเล่นพร้อมกัน)
+    const HOST_KEY = 'SENATE SIMULATION';           // รหัสผู้คุมเกม: เปิด ?view=admin&key=รหัสนี้
+
+    const REMOTE = !!(window.supabase && SUPABASE_URL && !SUPABASE_URL.includes('YOUR-PROJECT'));
+    const _qs = new URLSearchParams(window.location.search);
+    const isHost = !REMOTE || (_qs.get('view') === 'admin' && _qs.get('key') === HOST_KEY);
+    let sb = null, downCh = null, upCh = null, downReady = false;
+    let dirty = false, flushTimer = null, localTick = null;
+
+    // Client Local State
+    let myPlayerId = null;
+    let timerInterval = null;
+    let syncChannel = null;
+
+    // Initialize BroadcastChannel for Zero-Lag Multi-Window Sync
+    if (!REMOTE) try {
+      syncChannel = new BroadcastChannel('survival_quiz_channel');
+      syncChannel.onmessage = (event) => {
+        if (event.data && event.data.type === 'STATE_UPDATE') {
+          // Replace state from master host
+          GameData = event.data.payload;
+          onStateUpdated();
+        } else if (event.data && event.data.type === 'PLAYER_ACTION') {
+          // Admin receives player action
+          handleIncomingPlayerAction(event.data.payload);
+        }
+      };
+    } catch (e) {
+      console.warn("BroadcastChannel not supported in this iframe, operating locally:", e);
+    }
+
+    function sendState() {
+      if (downCh && downReady) {
+        downCh.send({ type: 'broadcast', event: 'state', payload: GameData });
+      }
+      try { localStorage.setItem('sq_host_state', JSON.stringify(GameData)); } catch (e) {}
+    }
+
+    // Host: รวมการอัปเดตจาก JOIN/ANSWER แล้วส่งทุก 3 วินาที (กันข้อความท่วมตอนคน 200 เข้าพร้อมกัน)
+    function markDirty() {
+      if (!REMOTE || !isHost) return;
+      dirty = true;
+      if (flushTimer) return;
+      flushTimer = setTimeout(() => {
+        flushTimer = null;
+        if (dirty) { dirty = false; sendState(); }
+      }, 3000);
+    }
+
+    function broadcastState() {
+      if (REMOTE) {
+        if (isHost) { dirty = false; sendState(); }
+      } else if (syncChannel) {
+        syncChannel.postMessage({ type: 'STATE_UPDATE', payload: GameData });
+      }
+      onStateUpdated();
+    }
+
+    function broadcastPlayerAction(action) {
+      if (REMOTE) {
+        // ผู้เล่นส่งผ่าน REST (ไม่ได้ subscribe) เพื่อให้ถึงเฉพาะ host ไม่กระจายไปทุกเครื่อง
+        if (upCh) upCh.send({ type: 'broadcast', event: 'action', payload: action });
+        if (action.type === 'ANSWER') {
+          const me = GameData.players.find(p => p.id === action.playerId);
+          if (me) me.answers[GameData.currentQIndex] = { choice: action.choice, timeTaken: action.timeTaken };
+        }
+        return;
+      }
+      if (syncChannel) {
+        syncChannel.postMessage({ type: 'PLAYER_ACTION', payload: action });
+      }
+      handleIncomingPlayerAction(action);
+    }
+
+    function handleIncomingPlayerAction(action) {
+      if (REMOTE && !isHost) return;
+      if (action.type === 'HELLO') { markDirty(); return; }
+      if (action.type === 'JOIN') {
+        const existing = GameData.players.find(p => p.id === action.player.id);
+        if (!existing) {
+          GameData.players.push(action.player);
+          renderAdminPlayers();
+          updateProjectorStats();
+        }
+        markDirty();
+      } else if (action.type === 'ANSWER') {
+        const player = GameData.players.find(p => p.id === action.playerId);
+        if (player && !player.eliminated && GameData.status === 'QUESTION') {
+          player.answers[GameData.currentQIndex] = {
+            choice: action.choice,
+            timeTaken: action.timeTaken
+          };
+          updateProjectorSubmissionProgress();
+          renderAdminPlayers();
+          markDirty();
+        }
+      }
+    }
+
+    // =========================================================================
+    // VIEW SWITCHER
+    // =========================================================================
+    function switchView(viewName) {
+      if (REMOTE && viewName === 'admin' && !isHost) viewName = 'player';
+      const views = ['player', 'projector', 'admin'];
+      views.forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        const btn = document.getElementById(`btn-tab-${v}`);
+        if (v === viewName) {
+          el.classList.remove('hidden');
+          btn.className = "px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 bg-gold-500 text-black font-bold shadow";
+        } else {
+          el.classList.add('hidden');
+          btn.className = "px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 text-gray-400 hover:text-white";
+        }
+      });
+
+      if (viewName === 'projector') {
+        renderQRCode();
+      }
+      onStateUpdated();
+    }
+
+    function showToast(message, isError = false) {
+      const toast = document.getElementById('custom-toast');
+      const toastMsg = document.getElementById('toast-msg');
+      const toastIcon = document.getElementById('toast-icon');
+
+      toastMsg.innerText = message;
+      if (isError) {
+        toastIcon.className = "fa-solid fa-triangle-exclamation text-red-500 text-lg";
+        toast.classList.add('border-red-500/60');
+      } else {
+        toastIcon.className = "fa-solid fa-circle-check text-amber-400 text-lg";
+        toast.classList.remove('border-red-500/60');
+      }
+
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3000);
+    }
+
+    // =========================================================================
+    // STATE REACTIVITY & RENDER DISPATCHER
+    // =========================================================================
+    function onStateUpdated() {
+      // 1. Update Header Nav info
+      document.getElementById('nav-pin').innerText = GameData.pin;
+      document.getElementById('nav-live-count').innerHTML = `<i class="fa-solid fa-users text-amber-400 mr-1"></i>${GameData.players.length} คน`;
+
+      // 2. Render Components for Active Views
+      renderProjectorView();
+      renderPlayerView();
+      renderAdminView();
+    }
+
+    // =========================================================================
+    // PLAYER VIEW LOGIC
+    // =========================================================================
+    function handlePlayerJoin(e) {
+      e.preventDefault();
+      const pinInput = document.getElementById('player-input-pin').value.trim();
+      const nameInput = document.getElementById('player-input-name').value.trim();
+
+      if (pinInput !== GameData.pin) {
+        showToast("Game PIN ไม่ถูกต้อง โปรดดูบนหน้าจอโปรเจกเตอร์", true);
+        return;
+      }
+      if (!nameInput) {
+        showToast("กรุณากรอกชื่อเล่นหรือรหัส", true);
+        return;
+      }
+
+      myPlayerId = 'p_' + Math.random().toString(36).substring(2, 9);
+      const newPlayer = {
+        id: myPlayerId,
+        name: nameInput,
+        lives: 2,
+        eliminated: false,
+        answers: {},
+        score: 0,
+        totalTimeTaken: 0
+      };
+
+      try { localStorage.setItem('sq_player', JSON.stringify({ id: myPlayerId, name: nameInput })); } catch (e) {}
+      broadcastPlayerAction({
+        type: 'JOIN',
+        player: newPlayer
+      });
+
+      document.getElementById('player-join-card').classList.add('hidden');
+      document.getElementById('player-game-card').classList.remove('hidden');
+      document.getElementById('p-display-name').innerText = nameInput;
+
+      showToast(`ยินดีต้อนรับคุณ ${nameInput} สู่สมรภูมิ!`);
+      onStateUpdated();
+    }
+
+    function renderPlayerView() {
+      if (!myPlayerId) return;
+
+      const player = GameData.players.find(p => p.id === myPlayerId);
+      if (!player) return;
+
+      // Hearts
+      const heartsContainer = document.getElementById('p-hearts-container');
+      if (player.lives === 2) {
+        heartsContainer.innerHTML = `<i class="fa-solid fa-heart text-red-500 drop-shadow"></i><i class="fa-solid fa-heart text-red-500 drop-shadow"></i>`;
+      } else if (player.lives === 1) {
+        heartsContainer.innerHTML = `<i class="fa-solid fa-heart text-red-500 drop-shadow"></i><i class="fa-regular fa-heart text-gray-600"></i>`;
+      } else {
+        heartsContainer.innerHTML = `<i class="fa-regular fa-heart text-gray-600"></i><i class="fa-regular fa-heart text-gray-600"></i>`;
+      }
+
+      // Eliminated Banner
+      const elimBanner = document.getElementById('p-eliminated-banner');
+      if (player.eliminated) {
+        elimBanner.classList.remove('hidden');
+      } else {
+        elimBanner.classList.add('hidden');
+      }
+
+      // Screen stages
+      const waiting = document.getElementById('p-state-waiting');
+      const question = document.getElementById('p-state-question');
+      const reveal = document.getElementById('p-state-reveal');
+
+      const currentQ = GameData.questions[GameData.currentQIndex];
+
+      if (GameData.status === 'LOBBY') {
+        waiting.classList.remove('hidden');
+        question.classList.add('hidden');
+        reveal.classList.add('hidden');
+        document.getElementById('p-waiting-title').innerText = "รอสัญญาณเริ่มเกม";
+        document.getElementById('p-waiting-sub').innerText = "เจ้าหน้าที่กำลังรอนักเรียนเข้าร่วมครบ 200 คน";
+      } else if (GameData.status === 'QUESTION') {
+        waiting.classList.add('hidden');
+        question.classList.remove('hidden');
+        reveal.classList.add('hidden');
+
+        document.getElementById('p-round-badge').innerText = currentQ.round;
+        document.getElementById('p-q-num').innerText = GameData.currentQIndex + 1;
+        document.getElementById('p-q-text').innerText = currentQ.prompt;
+        document.getElementById('p-timer').innerText = GameData.timer;
+
+        // Populate Choice texts
+        for (let i = 0; i < 4; i++) {
+          document.getElementById(`p-opt-text-${i}`).innerText = currentQ.options[i];
+          const btn = document.getElementById(`p-btn-opt-${i}`);
+          btn.disabled = player.eliminated || !!player.answers[GameData.currentQIndex];
+          btn.classList.remove('opacity-40', 'ring-4', 'ring-amber-400');
+        }
+
+        const submittedNotice = document.getElementById('p-submitted-notice');
+        if (player.answers[GameData.currentQIndex]) {
+          submittedNotice.classList.remove('hidden');
+          const chosen = player.answers[GameData.currentQIndex].choice;
+          document.getElementById(`p-btn-opt-${chosen}`).classList.add('ring-4', 'ring-amber-400');
+        } else {
+          submittedNotice.classList.add('hidden');
+        }
+
+      } else if (GameData.status === 'LOCKED') {
+        // Just disable all buttons
+        for (let i = 0; i < 4; i++) {
+          document.getElementById(`p-btn-opt-${i}`).disabled = true;
+          document.getElementById(`p-btn-opt-${i}`).classList.add('opacity-40');
+        }
+      } else if (GameData.status === 'REVEAL') {
+        waiting.classList.add('hidden');
+        question.classList.add('hidden');
+        reveal.classList.remove('hidden');
+
+        const ans = player.answers[GameData.currentQIndex];
+        const isCorrect = ans && ans.choice === currentQ.correct;
+        const statusTitle = document.getElementById('p-reveal-status-title');
+        const lifeMsg = document.getElementById('p-reveal-life-msg');
+        const badge = document.getElementById('p-reveal-badge');
+
+        if (isCorrect) {
+          badge.className = "w-20 h-20 rounded-full mx-auto flex items-center justify-center text-4xl mb-3 shadow-lg bg-emerald-500/20 text-emerald-400 border-2 border-emerald-500";
+          badge.innerHTML = `<i class="fa-solid fa-check"></i>`;
+          statusTitle.innerText = "ยอดเยี่ยม! คุณตอบถูกต้อง";
+          statusTitle.className = "text-2xl font-black font-display text-emerald-400";
+          lifeMsg.innerText = `รักษาชีวิตไว้ได้ (เหลือ ${player.lives} หัวใจ)`;
+        } else {
+          badge.className = "w-20 h-20 rounded-full mx-auto flex items-center justify-center text-4xl mb-3 shadow-lg bg-red-500/20 text-red-500 border-2 border-red-500";
+          badge.innerHTML = `<i class="fa-solid fa-xmark"></i>`;
+          statusTitle.innerText = ans ? "น่าเสียดาย! คุณตอบผิด" : "หมดเวลา! คุณไม่ได้ส่งคำตอบ";
+          statusTitle.className = "text-2xl font-black font-display text-red-400";
+          lifeMsg.innerText = player.eliminated ? "คุณสูญเสียชีวิตครบ 2 ครั้ง ตกรอบทันที!" : `คุณเสีย 1 ชีวิต (เหลือ ${player.lives} หัวใจ)`;
+        }
+
+        document.getElementById('p-reveal-explanation').innerText = currentQ.explanation;
+      } else if (GameData.status === 'RANKING') {
+        waiting.classList.remove('hidden');
+        question.classList.add('hidden');
+        reveal.classList.add('hidden');
+        document.getElementById('p-waiting-title').innerText = "สรุปผลการแข่งขัน";
+        document.getElementById('p-waiting-sub').innerText = `อันดับคะแนนของคุณ: ${getPlayerRank(player.id)} (โปรดดูรายชื่อผู้ชนะบนโปรเจกเตอร์)`;
+      }
+    }
+
+    function submitPlayerAnswer(choiceIdx) {
+      if (!myPlayerId || GameData.status !== 'QUESTION') return;
+      const player = GameData.players.find(p => p.id === myPlayerId);
+      if (!player || player.eliminated || player.answers[GameData.currentQIndex]) return;
+
+      const timeTaken = GameData.totalTime - GameData.timer;
+      AudioEngine.playTick();
+
+      broadcastPlayerAction({
+        type: 'ANSWER',
+        playerId: myPlayerId,
+        choice: choiceIdx,
+        timeTaken: timeTaken
+      });
+
+      renderPlayerView();
+    }
+
+    // =========================================================================
+    // PROJECTOR VIEW LOGIC
+    // =========================================================================
+    function renderQRCode() {
+      const container = document.getElementById('proj-qrcode-container');
+      if (!container) return;
+      container.innerHTML = "";
+      try {
+        new QRCode(container, {
+          text: window.location.origin + window.location.pathname + '?view=player',
+          width: 180,
+          height: 180,
+          colorDark: "#0B0F1E",
+          colorLight: "#FFFFFF",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      } catch (e) {
+        container.innerHTML = `<div class="text-xs text-black font-bold p-4">QR CODE READY<br>${window.location.host}</div>`;
+      }
+      document.getElementById('proj-big-pin').innerText = GameData.pin;
+    }
+
+    function updateProjectorStats() {
+      const total = GameData.players.length;
+      const alive = GameData.players.filter(p => !p.eliminated).length;
+      const danger = GameData.players.filter(p => !p.eliminated && p.lives === 1).length;
+      const eliminated = GameData.players.filter(p => p.eliminated).length;
+
+      document.getElementById('proj-stat-total').innerText = total;
+      document.getElementById('proj-stat-alive').innerText = alive;
+      document.getElementById('proj-stat-danger').innerText = danger;
+      document.getElementById('proj-stat-eliminated').innerText = eliminated;
+
+      document.getElementById('proj-active-survivors').innerText = alive;
+    }
+
+    function updateProjectorSubmissionProgress() {
+      const alivePlayers = GameData.players.filter(p => !p.eliminated);
+      const submitted = alivePlayers.filter(p => p.answers[GameData.currentQIndex] !== undefined).length;
+      const percent = alivePlayers.length > 0 ? (submitted / alivePlayers.length) * 100 : 0;
+
+      document.getElementById('proj-submitted-count').innerText = submitted;
+      document.getElementById('proj-submitted-progress').style.width = `${percent}%`;
+    }
+
+    function renderProjectorView() {
+      updateProjectorStats();
+
+      const stageLobby = document.getElementById('proj-stage-lobby');
+      const stageQuestion = document.getElementById('proj-stage-question');
+      const stageReveal = document.getElementById('proj-stage-reveal');
+      const stageRanking = document.getElementById('proj-stage-ranking');
+
+      const currentQ = GameData.questions[GameData.currentQIndex];
+
+      if (GameData.status === 'LOBBY') {
+        stageLobby.classList.remove('hidden');
+        stageQuestion.classList.add('hidden');
+        stageReveal.classList.add('hidden');
+        stageRanking.classList.add('hidden');
+      } else if (GameData.status === 'QUESTION' || GameData.status === 'LOCKED') {
+        stageLobby.classList.add('hidden');
+        stageQuestion.classList.remove('hidden');
+        stageReveal.classList.add('hidden');
+        stageRanking.classList.add('hidden');
+
+        document.getElementById('proj-q-round').innerText = currentQ.round;
+        document.getElementById('proj-q-num').innerText = GameData.currentQIndex + 1;
+        document.getElementById('proj-q-text').innerText = currentQ.prompt;
+        document.getElementById('proj-timer-num').innerText = GameData.timer;
+
+        // Reset choice cards styles
+        for (let i = 0; i < 4; i++) {
+          document.getElementById(`proj-text-opt-${i}`).innerText = currentQ.options[i];
+          const card = document.getElementById(`proj-card-opt-${i}`);
+          card.className = "proj-choice-card bg-arena-900 border-2 border-arena-700/60 rounded-2xl p-4 md:p-6 flex items-center gap-4 transition-all duration-300";
+          document.getElementById(`proj-stat-opt-${i}`).classList.add('hidden');
+        }
+
+        updateProjectorSubmissionProgress();
+      } else if (GameData.status === 'REVEAL') {
+        stageLobby.classList.add('hidden');
+        stageQuestion.classList.add('hidden');
+        stageReveal.classList.remove('hidden');
+        stageRanking.classList.add('hidden');
+
+        const optLetters = ['A', 'B', 'C', 'D'];
+        document.getElementById('proj-reveal-correct-title').innerText = `${optLetters[currentQ.correct]}: ${currentQ.options[currentQ.correct]}`;
+        document.getElementById('proj-reveal-explanation').innerText = currentQ.explanation;
+
+        document.getElementById('proj-round-correct-cnt').innerText = GameData.roundStats.correct;
+        document.getElementById('proj-round-wrong-cnt').innerText = GameData.roundStats.wrong;
+        document.getElementById('proj-round-new-eliminated-cnt').innerText = GameData.roundStats.eliminated;
+      } else if (GameData.status === 'RANKING') {
+        stageLobby.classList.add('hidden');
+        stageQuestion.classList.add('hidden');
+        stageReveal.classList.add('hidden');
+        stageRanking.classList.remove('hidden');
+
+        renderLeaderboardTable();
+      }
+    }
+
+    function renderLeaderboardTable() {
+      const container = document.getElementById('proj-ranking-list');
+      container.innerHTML = "";
+
+      // Sort criteria:
+      // 1. Alive before Eliminated
+      // 2. Remaining Lives desc
+      // 3. Higher Score desc
+      // 4. Faster total time taken asc
+      const sorted = [...GameData.players].sort((a, b) => {
+        if (a.eliminated !== b.eliminated) return a.eliminated ? 1 : -1;
+        if (b.lives !== a.lives) return b.lives - a.lives;
+        if (b.score !== a.score) return b.score - a.score;
+        return a.totalTimeTaken - b.totalTimeTaken;
+      });
+
+      const top15 = sorted.slice(0, 15);
+
+      if (top15.length === 0) {
+        container.innerHTML = `<div class="text-center text-gray-500 py-6">ยังไม่มีผู้เข้าแข่งขัน</div>`;
+        return;
+      }
+
+      top15.forEach((p, index) => {
+        let badgeColor = "bg-arena-800 text-gray-300";
+        let rankIcon = `#${index + 1}`;
+        if (index === 0) {
+          badgeColor = "bg-amber-500 text-black font-black text-glow-gold";
+          rankIcon = `🏆 1`;
+        } else if (index === 1) {
+          badgeColor = "bg-slate-300 text-black font-black";
+          rankIcon = `🥈 2`;
+        } else if (index === 2) {
+          badgeColor = "bg-amber-700 text-white font-black";
+          rankIcon = `🥉 3`;
+        }
+
+        const livesHtml = p.lives === 2 
+          ? `<span class="text-red-500"><i class="fa-solid fa-heart"></i><i class="fa-solid fa-heart ml-1"></i></span>`
+          : p.lives === 1 
+            ? `<span class="text-amber-500"><i class="fa-solid fa-heart"></i></span>`
+            : `<span class="text-gray-500 text-xs">ELIMINATED</span>`;
+
+        const row = document.createElement('div');
+        row.className = `flex items-center justify-between p-3.5 rounded-xl border ${p.eliminated ? 'bg-red-950/20 border-red-900/40 opacity-70' : 'bg-arena-950/80 border-arena-800'}`;
+        row.innerHTML = `
+          <div class="flex items-center gap-3">
+            <span class="w-10 h-10 rounded-xl ${badgeColor} flex items-center justify-center font-display font-bold text-base shrink-0">
+              ${rankIcon}
+            </span>
+            <div>
+              <div class="font-extrabold text-sm md:text-base text-white">${p.name}</div>
+              <div class="text-[11px] text-gray-400">เวลารวม: ${p.totalTimeTaken.toFixed(1)}s</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-6">
+            <div class="text-right">
+              <div class="text-[10px] text-gray-400 uppercase">พลังชีวิต</div>
+              <div>${livesHtml}</div>
+            </div>
+            <div class="text-right min-w-[70px]">
+              <div class="text-[10px] text-gray-400 uppercase">คะแนน</div>
+              <div class="font-mono font-black text-amber-400 text-base md:text-lg">${p.score}</div>
+            </div>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    function getPlayerRank(playerId) {
+      const sorted = [...GameData.players].sort((a, b) => {
+        if (a.eliminated !== b.eliminated) return a.eliminated ? 1 : -1;
+        if (b.lives !== a.lives) return b.lives - a.lives;
+        if (b.score !== a.score) return b.score - a.score;
+        return a.totalTimeTaken - b.totalTimeTaken;
+      });
+      const idx = sorted.findIndex(p => p.id === playerId);
+      return idx >= 0 ? `#${idx + 1}` : '-';
+    }
+
+    // =========================================================================
+    // ADMIN HOST CONTROL LOGIC
+    // =========================================================================
+    function adminTriggerQuestion() {
+      if (GameData.currentQIndex >= GameData.questions.length) {
+        showToast("ครบทุกคำถามแล้ว! กำลังเปิดหน้าสรุป Ranking");
+        adminShowLeaderboard();
+        return;
+      }
+
+      GameData.status = 'QUESTION';
+      const timeSelected = parseInt(document.getElementById('adm-timer-select').value) || 20;
+      GameData.totalTime = timeSelected;
+      GameData.timer = timeSelected;
+
+      // Start Countdown
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (GameData.timer > 0) {
+          GameData.timer--;
+          if (GameData.timer <= 5 && GameData.timer > 0) {
+            AudioEngine.playTick();
+          }
+          if (REMOTE) onStateUpdated(); else broadcastState();
+        } else {
+          clearInterval(timerInterval);
+          adminLockAnswers();
+        }
+      }, 1000);
+
+      broadcastState();
+      showToast(`เปิดคำถามข้อที่ ${GameData.currentQIndex + 1} แล้ว!`);
+    }
+
+    function adminLockAnswers() {
+      clearInterval(timerInterval);
+      GameData.status = 'LOCKED';
+      broadcastState();
+      showToast("ปิดรับคำตอบแล้ว! เตรียมแสดงผลเฉลย");
+    }
+
+    function adminRevealAnswer() {
+      clearInterval(timerInterval);
+      GameData.status = 'REVEAL';
+
+      const currentQ = GameData.questions[GameData.currentQIndex];
+      let correctCnt = 0;
+      let wrongCnt = 0;
+      let newlyEliminatedCnt = 0;
+
+      // Calculate Lives & Scores for all non-eliminated players
+      GameData.players.forEach(p => {
+        if (!p.eliminated) {
+          const ans = p.answers[GameData.currentQIndex];
+          if (ans && ans.choice === currentQ.correct) {
+            // Correct!
+            correctCnt++;
+            // Score formula: 1000 base + speed bonus
+            const speedBonus = Math.max(0, Math.floor((GameData.totalTime - ans.timeTaken) * 20));
+            p.score += (1000 + speedBonus);
+            p.totalTimeTaken += ans.timeTaken;
+          } else {
+            // Wrong or Timed out -> Lose 1 Life!
+            wrongCnt++;
+            p.lives -= 1;
+            p.totalTimeTaken += GameData.totalTime;
+            if (p.lives <= 0) {
+              p.lives = 0;
+              p.eliminated = true;
+              newlyEliminatedCnt++;
+            }
+          }
+        }
+      });
+
+      GameData.roundStats = {
+        correct: correctCnt,
+        wrong: wrongCnt,
+        eliminated: newlyEliminatedCnt
+      };
+
+      if (newlyEliminatedCnt > 0) {
+        AudioEngine.playEliminated();
+      } else {
+        AudioEngine.playCorrect();
+      }
+
+      broadcastState();
+      showToast(`เฉลยข้อที่ ${GameData.currentQIndex + 1}: ผู้รอดชีวิต ${GameData.players.filter(p => !p.eliminated).length} คน`);
+    }
+
+    function adminNextQuestion() {
+      clearInterval(timerInterval);
+      if (GameData.currentQIndex + 1 < GameData.questions.length) {
+        GameData.currentQIndex++;
+        GameData.status = 'LOBBY';
+        broadcastState();
+        showToast(`ไปยังคำถามที่ ${GameData.currentQIndex + 1} แล้ว`);
+      } else {
+        adminShowLeaderboard();
+      }
+    }
+
+    function adminShowLeaderboard() {
+      clearInterval(timerInterval);
+      GameData.status = 'RANKING';
+      broadcastState();
+      showToast("แสดงตารางสรุปผล Ranking แล้ว!");
+    }
+
+    function adminResetGame() {
+      clearInterval(timerInterval);
+      GameData.status = 'LOBBY';
+      GameData.currentQIndex = 0;
+      GameData.timer = 20;
+      // Reset players lives
+      GameData.players.forEach(p => {
+        p.lives = 2;
+        p.eliminated = false;
+        p.answers = {};
+        p.score = 0;
+        p.totalTimeTaken = 0;
+      });
+      broadcastState();
+      showToast("รีเซ็ตสถานะเกมเป็นรอบเริ่มต้นแล้ว!");
+    }
+
+    // Stress Test Simulator (Simulate 200 concurrent student bots)
+    function adminSimulatePlayers(count = 200) {
+      const mockNames = [
+        "ธนภัทร", "ชญานิศ", "กิตติศักดิ์", "ณัฐพงษ์", "พิมพ์ลภัส", "วรเมธ", "ศุภวิชญ์", "ปวริศา",
+        "อภิชญา", "ปภังกร", "ธีรภัทร", "สุภัสสร", "กัญญารัตน์", "ธนดล", "ภัทรดนัย", "ชนิกานต์",
+        "พลอยไพลิน", "จิรภัทร", "นภัสสร", "พงศกร", "ณิชารีย์", "ธนกฤต", "สิรวิชญ์", "ศิรดา"
+      ];
+
+      GameData.players = [];
+      for (let i = 1; i <= count; i++) {
+        const baseName = mockNames[i % mockNames.length];
+        const studentId = String(100 + i).padStart(3, '0');
+        GameData.players.push({
+          id: `bot_${i}`,
+          name: `${baseName} (#${studentId})`,
+          lives: 2,
+          eliminated: false,
+          answers: {},
+          score: 0,
+          totalTimeTaken: 0,
+          botAccuracy: 0.65 + Math.random() * 0.3 // Realism variance
+        });
+      }
+
+      // If simulated during a question, auto-answer for bots
+      if (GameData.status === 'QUESTION') {
+        simulateBotAnswersForCurrentQ();
+      }
+
+      broadcastState();
+      showToast(`สร้างบอทนักเรียน ${count} คนสำเร็จ! พร้อมทดสอบระบบ`);
+    }
+
+    function simulateBotAnswersForCurrentQ() {
+      const curQ = GameData.questions[GameData.currentQIndex];
+      GameData.players.forEach(p => {
+        if (!p.eliminated && p.id.startsWith('bot_') && !p.answers[GameData.currentQIndex]) {
+          const isRight = Math.random() < (p.botAccuracy || 0.7);
+          const chosen = isRight ? curQ.correct : (curQ.correct + 1 + Math.floor(Math.random() * 3)) % 4;
+          const time = +(1 + Math.random() * (GameData.totalTime - 2)).toFixed(1);
+          p.answers[GameData.currentQIndex] = {
+            choice: chosen,
+            timeTaken: time
+          };
+        }
+      });
+    }
+
+    // Question Management CRUD
+    function renderAdminQuestionsTable() {
+      const container = document.getElementById('adm-questions-table');
+      container.innerHTML = "";
+
+      GameData.questions.forEach((q, idx) => {
+        const div = document.createElement('div');
+        div.className = `p-3 rounded-xl border flex items-center justify-between gap-3 text-xs ${idx === GameData.currentQIndex ? 'bg-amber-950/30 border-amber-500/60' : 'bg-arena-950 border-arena-800'}`;
+        div.innerHTML = `
+          <div class="flex items-center gap-3 overflow-hidden">
+            <span class="w-7 h-7 rounded-lg bg-arena-800 text-amber-400 font-bold flex items-center justify-center shrink-0">
+              ${idx + 1}
+            </span>
+            <div class="truncate">
+              <span class="text-[10px] text-gray-400 font-bold uppercase mr-2">[${q.round}]</span>
+              <span class="text-gray-200 font-semibold">${q.prompt}</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button onclick="editQuestionModal(${idx})" class="p-1.5 px-2 rounded bg-arena-800 hover:bg-arena-700 text-gray-300">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </button>
+            <button onclick="deleteQuestion(${idx})" class="p-1.5 px-2 rounded bg-red-950/80 hover:bg-red-900 text-red-400 border border-red-800/50">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function renderAdminPlayers() {
+      const tbody = document.getElementById('adm-player-tbody');
+      const search = (document.getElementById('adm-player-search').value || '').toLowerCase();
+
+      // Stats Counters
+      const count2 = GameData.players.filter(p => !p.eliminated && p.lives === 2).length;
+      const count1 = GameData.players.filter(p => !p.eliminated && p.lives === 1).length;
+      const count0 = GameData.players.filter(p => p.eliminated).length;
+
+      document.getElementById('adm-stat-2life').innerText = count2;
+      document.getElementById('adm-stat-1life').innerText = count1;
+      document.getElementById('adm-stat-elim').innerText = count0;
+
+      tbody.innerHTML = "";
+      const filtered = GameData.players.filter(p => p.name.toLowerCase().includes(search));
+
+      filtered.slice(0, 50).forEach((p, idx) => {
+        const ans = p.answers[GameData.currentQIndex];
+        const optLetter = ans !== undefined ? ['A', 'B', 'C', 'D'][ans.choice] : '-';
+
+        const tr = document.createElement('tr');
+        tr.className = p.eliminated ? 'bg-red-950/20 text-gray-500' : 'hover:bg-arena-800/40';
+        tr.innerHTML = `
+          <td class="p-3 font-mono">${idx + 1}</td>
+          <td class="p-3 font-bold text-white">${p.name}</td>
+          <td class="p-3">${p.lives === 2 ? '❤️❤️' : p.lives === 1 ? '❤️' : '💀 0'}</td>
+          <td class="p-3 font-mono font-bold ${ans !== undefined ? 'text-amber-400' : 'text-gray-600'}">${optLetter}</td>
+          <td class="p-3 font-mono text-emerald-400">${p.score}</td>
+          <td class="p-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${p.eliminated ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-emerald-950 text-emerald-400 border border-emerald-800'}">
+              ${p.eliminated ? 'ELIMINATED' : 'ALIVE'}
+            </span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderAdminView() {
+      document.getElementById('adm-current-q-index').innerText = `${GameData.currentQIndex + 1} / ${GameData.questions.length}`;
+      const curQ = GameData.questions[GameData.currentQIndex];
+      if (curQ) {
+        document.getElementById('adm-current-q-title').innerText = `${curQ.round} - ${curQ.prompt}`;
+      }
+
+      renderAdminQuestionsTable();
+      renderAdminPlayers();
+    }
+
+    // Modal Operations
+    function openAddQuestionModal() {
+      document.getElementById('modal-q-title').innerText = "เพิ่มคำถามข้อใหม่";
+      document.getElementById('edit-q-id').value = "";
+      document.getElementById('edit-q-prompt').value = "";
+      document.getElementById('edit-opt-0').value = "";
+      document.getElementById('edit-opt-1').value = "";
+      document.getElementById('edit-opt-2').value = "";
+      document.getElementById('edit-opt-3').value = "";
+      document.getElementById('edit-q-correct').value = "0";
+      document.getElementById('edit-q-explanation').value = "";
+      document.getElementById('modal-question').classList.remove('hidden');
+    }
+
+    function editQuestionModal(idx) {
+      const q = GameData.questions[idx];
+      document.getElementById('modal-q-title').innerText = `แก้ไขคำถามข้อที่ ${idx + 1}`;
+      document.getElementById('edit-q-id').value = idx;
+      document.getElementById('edit-q-round').value = q.round;
+      document.getElementById('edit-q-difficulty').value = q.difficulty;
+      document.getElementById('edit-q-prompt').value = q.prompt;
+      document.getElementById('edit-opt-0').value = q.options[0];
+      document.getElementById('edit-opt-1').value = q.options[1];
+      document.getElementById('edit-opt-2').value = q.options[2];
+      document.getElementById('edit-opt-3').value = q.options[3];
+      document.getElementById('edit-q-correct').value = q.correct;
+      document.getElementById('edit-q-explanation').value = q.explanation;
+      document.getElementById('modal-question').classList.remove('hidden');
+    }
+
+    function closeQuestionModal() {
+      document.getElementById('modal-question').classList.add('hidden');
+    }
+
+    function handleSaveQuestion(e) {
+      e.preventDefault();
+      const idVal = document.getElementById('edit-q-id').value;
+      const qData = {
+        id: idVal !== "" ? GameData.questions[parseInt(idVal)].id : `q_${Date.now()}`,
+        round: document.getElementById('edit-q-round').value,
+        difficulty: document.getElementById('edit-q-difficulty').value,
+        prompt: document.getElementById('edit-q-prompt').value.trim(),
+        options: [
+          document.getElementById('edit-opt-0').value.trim(),
+          document.getElementById('edit-opt-1').value.trim(),
+          document.getElementById('edit-opt-2').value.trim(),
+          document.getElementById('edit-opt-3').value.trim(),
+        ],
+        correct: parseInt(document.getElementById('edit-q-correct').value),
+        explanation: document.getElementById('edit-q-explanation').value.trim()
+      };
+
+      if (idVal !== "") {
+        GameData.questions[parseInt(idVal)] = qData;
+      } else {
+        GameData.questions.push(qData);
+      }
+
+      closeQuestionModal();
+      broadcastState();
+      showToast("บันทึกคำถามเรียบร้อยแล้ว!");
+    }
+
+    function deleteQuestion(idx) {
+      if (GameData.questions.length <= 1) {
+        showToast("ไม่สามารถลบได้ ต้องมีคำถามอย่างน้อย 1 ข้อ", true);
+        return;
+      }
+      GameData.questions.splice(idx, 1);
+      if (GameData.currentQIndex >= GameData.questions.length) {
+        GameData.currentQIndex = GameData.questions.length - 1;
+      }
+      broadcastState();
+      showToast("ลบคำถามเรียบร้อยแล้ว");
+    }
+
+    function exportQuestionsJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(GameData.questions, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `survival_quiz_questions_${Date.now()}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function importQuestionsJSON(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const parsed = JSON.parse(evt.target.result);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            GameData.questions = parsed;
+            GameData.currentQIndex = 0;
+            broadcastState();
+            showToast(`นำเข้าคำถามสำเร็จ ${parsed.length} ข้อ!`);
+          } else {
+            showToast("รูปแบบไฟล์ JSON ไม่ถูกต้อง", true);
+          }
+        } catch (err) {
+          showToast("ไม่สามารถอ่านไฟล์ JSON ได้", true);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function adminKickDeadPlayers() {
+      GameData.players = GameData.players.filter(p => !p.eliminated);
+      broadcastState();
+      showToast("ล้างรายชื่อผู้ตกรอบออกเรียบร้อยแล้ว");
+    }
+
+    // Auto Simulation Loop when question is active with bots
+    setInterval(() => {
+      if (GameData.status === 'QUESTION' && isHost) {
+        simulateBotAnswersForCurrentQ();
+      }
+    }, 2000);
+
+    // =========================================================================
+    // SUPABASE REALTIME TRANSPORT
+    // =========================================================================
+    function startLocalTimer() {
+      clearInterval(localTick);
+      if (GameData.status !== 'QUESTION') return;
+      localTick = setInterval(() => {
+        if (GameData.timer > 0) { GameData.timer--; onStateUpdated(); }
+        else clearInterval(localTick);
+      }, 1000);
+    }
+
+    function initTransport() {
+      if (!REMOTE) {
+        console.warn('Supabase ยังไม่ได้ตั้งค่า: ใช้โหมดในเครื่อง (BroadcastChannel)');
+        return;
+      }
+      if (isHost) {
+        try {
+          const saved = JSON.parse(localStorage.getItem('sq_host_state') || 'null');
+          if (saved && saved.players) {
+            GameData = saved;
+            if (GameData.status === 'QUESTION') GameData.status = 'LOCKED';
+          }
+        } catch (e) {}
+      }
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        realtime: { params: { eventsPerSecond: 20 } }
+      });
+      downCh = sb.channel(ROOM + ':down', { config: { broadcast: { self: false } } });
+      upCh = sb.channel(ROOM + ':up');
+
+      downCh.on('broadcast', { event: 'state' }, ({ payload }) => {
+        if (isHost) return;
+        GameData = payload;
+        startLocalTimer();
+        onStateUpdated();
+      });
+
+      if (isHost) {
+        upCh.on('broadcast', { event: 'action' }, ({ payload }) => handleIncomingPlayerAction(payload)).subscribe();
+      }
+
+      downCh.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          downReady = true;
+          showToast(isHost ? 'Host เชื่อมต่อ Supabase แล้ว' : 'เชื่อมต่อเกมสำเร็จ');
+          if (isHost) { sendState(); }
+          else {
+            broadcastPlayerAction({ type: 'HELLO' });
+            try {
+              const me = JSON.parse(localStorage.getItem('sq_player') || 'null');
+              if (me && me.id && me.name) {
+                myPlayerId = me.id;
+                document.getElementById('player-join-card').classList.add('hidden');
+                document.getElementById('player-game-card').classList.remove('hidden');
+                document.getElementById('p-display-name').innerText = me.name;
+                broadcastPlayerAction({ type: 'JOIN', player: { id: me.id, name: me.name, lives: 2, eliminated: false, answers: {}, score: 0, totalTimeTaken: 0 } });
+              }
+            } catch (e) {}
+          }
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          downReady = false;
+          showToast('เชื่อมต่อ Supabase ไม่ได้ ตรวจ URL/Key', true);
+        }
+      });
+    }
+
+    // Initial Window Load
+    window.onload = function() {
+      initTransport();
+      if (REMOTE && !isHost) {
+        const b = document.getElementById('btn-tab-admin');
+        if (b) b.classList.add('hidden');
+      }
+      // Check query param for default view (e.g. ?view=projector or ?view=admin)
+      const params = new URLSearchParams(window.location.search);
+      const initialView = params.get('view') || 'projector';
+      switchView(initialView);
+      renderQRCode();
+    };
+  </script>
+</body>
+</html>
