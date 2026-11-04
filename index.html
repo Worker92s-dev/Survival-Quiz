@@ -734,6 +734,9 @@
         <button onclick="adminKickDeadPlayers()" class="px-3 py-2 rounded-lg bg-arena-800 text-gray-400 hover:text-white text-xs border border-arena-700 whitespace-nowrap">
           ล้างผู้ตกรอบออก
         </button>
+        <button onclick="adminClearAllPlayers()" class="px-3 py-2 rounded-lg bg-red-950 text-red-300 hover:bg-red-900 text-xs border border-red-700 whitespace-nowrap font-bold">
+          <i class="fa-solid fa-user-slash mr-1"></i> ล้างรายชื่อทั้งหมด
+        </button>
       </div>
 
       <!-- Responsive Table -->
@@ -1484,6 +1487,7 @@
       if (REMOTE && !isHost) return;
       if (action.type === 'HELLO') { markDirty(); return; }
       if (action.type === 'JOIN') {
+        if ((GameData.removed || []).includes(action.player.id)) return;
         const existing = GameData.players.find(p => p.id === action.player.id);
         if (!existing) {
           GameData.players.push(action.player);
@@ -1899,7 +1903,17 @@
       onStateUpdated();
     }
 
+    function resetPlayerSession() {
+      myPlayerId = null;
+      try { localStorage.removeItem('sq_player:' + ROOM); } catch (e) {}
+      const jc = document.getElementById('player-join-card'), gc = document.getElementById('player-game-card');
+      if (jc) jc.classList.remove('hidden');
+      if (gc) gc.classList.add('hidden');
+      showToast('ผู้ดูแลล้างรายชื่อแล้ว กรุณากรอกชื่อเข้าร่วมใหม่', true);
+    }
+
     function renderPlayerView() {
+      if (myPlayerId && (GameData.removed || []).includes(myPlayerId)) { resetPlayerSession(); return; }
       if (!myPlayerId) return;
 
       const player = GameData.players.find(p => p.id === myPlayerId);
@@ -2650,6 +2664,20 @@
       GameData.players = GameData.players.filter(p => !p.eliminated);
       broadcastState();
       showToast("ล้างรายชื่อผู้ตกรอบออกเรียบร้อยแล้ว");
+    }
+
+    // ล้างรายชื่อผู้เล่นทั้งหมด (ไม่เก็บไว้) — จำ id ที่ถูกล้างไว้ เพื่อไม่ให้เครื่องผู้เล่นเดิมกลับเข้ามาเองตอนรีเฟรช
+    function adminClearAllPlayers() {
+      const n = GameData.players.length;
+      if (n === 0) { showToast('ยังไม่มีผู้เล่นในรายชื่อ'); return; }
+      if (!confirm('ล้างรายชื่อผู้เล่นทั้งหมด ' + n + ' คน?\nคะแนน ชีวิต และคำตอบของทุกคนจะหายไป และกู้คืนไม่ได้\n(ผู้เล่นต้องกรอกชื่อเข้าร่วมใหม่)')) return;
+      const removed = new Set(GameData.removed || []);
+      GameData.players.forEach(p => removed.add(p.id));
+      GameData.removed = Array.from(removed);
+      GameData.players = [];
+      GameData.roundStats = { correct: 0, wrong: 0, eliminated: 0 };
+      broadcastState();
+      showToast('ล้างรายชื่อผู้เล่นทั้งหมด ' + n + ' คนแล้ว');
     }
 
     // Auto Simulation Loop when question is active with bots
