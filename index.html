@@ -553,8 +553,12 @@
         <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
           <span class="text-xs font-bold text-gray-300"><i class="fa-solid fa-chalkboard-user text-amber-400 mr-1"></i> หน้าจอโปรเจกเตอร์ตอนนี้</span>
           <span id="adm-proj-mode-label" class="text-[11px] text-gray-400"></span>
+          <span class="flex items-center gap-2">
+            <button onclick="switchView('projector')" class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px] font-bold hover:bg-amber-500/30"><i class="fa-solid fa-expand mr-1"></i> เปิดโหมดเวที (จอเดียว)</button>
+            <button onclick="window.open(window.location.pathname + '?view=projector', '_blank')" class="px-2.5 py-1 rounded-lg bg-arena-800 text-gray-300 border border-arena-600 text-[11px] hover:bg-arena-700">หน้าต่างแยก (2 จอ)</button>
+          </span>
         </div>
-        <div class="grid grid-cols-5 gap-2 text-xs">
+        <div class="grid grid-cols-3 sm:grid-cols-5 gap-2 text-xs">
           <button data-proj="AUTO" onclick="adminSetProjectorScreen('AUTO')" class="adm-proj-btn px-2 py-2 rounded-lg border font-bold transition">🔄 อัตโนมัติ</button>
           <button data-proj="LOBBY" onclick="adminSetProjectorScreen('LOBBY')" class="adm-proj-btn px-2 py-2 rounded-lg border font-bold transition">Lobby</button>
           <button data-proj="QUESTION" onclick="adminSetProjectorScreen('QUESTION')" class="adm-proj-btn px-2 py-2 rounded-lg border font-bold transition">คำถาม</button>
@@ -1068,6 +1072,9 @@
 
     // Client Local State
     let myPlayerId = null;
+    let currentView = null;
+    let hudPinned = false;
+    let hudLastAdv = 0;
     let timerInterval = null;
     let syncChannel = null;
 
@@ -1161,10 +1168,6 @@
     // =========================================================================
     function switchView(viewName) {
       if (REMOTE && viewName === 'admin' && !isHost) viewName = 'player';
-      if (REMOTE && isHost && viewName === 'projector') {
-        window.open(window.location.pathname + '?view=projector', '_blank');
-        return;
-      }
       const views = ['player', 'projector', 'admin'];
       views.forEach(v => {
         const el = document.getElementById(`view-${v}`);
@@ -1189,8 +1192,77 @@
       if (viewName === 'projector') {
         renderQRCode();
       }
+      currentView = viewName;
+
+      // Host Stage Mode: โชว์หน้าโปรเจกเตอร์ในหน้าต่างเดียวกับแอดมิน ซ่อนแถบหัวเว็บ + มีแถบควบคุมลอยเรียกใช้ด้วยเมาส์/คีย์ลัด
+      const hostStage = isHost && viewName === 'projector';
+      const hdr = document.querySelector('header');
+      if (hdr) hdr.classList.toggle('hidden', hostStage);
+      const hud = document.getElementById('host-hud');
+      if (hud) {
+        hud.classList.toggle('hidden', !hostStage);
+        hudPinned = false;
+        if (hostStage) { setHud(true); setTimeout(() => { if (!hudPinned) setHud(false); }, 3500); }
+      }
       onStateUpdated();
     }
+
+    // ---- Host HUD (แถบควบคุมลอยบนหน้าโปรเจกเตอร์) ----
+    function setHud(show) {
+      const hud = document.getElementById('host-hud');
+      if (hud) hud.classList.toggle('translate-y-full', !show);
+    }
+
+    function hostAdvance() {
+      const now = Date.now();
+      if (now - hudLastAdv < 400) return; // กันกดรัว
+      hudLastAdv = now;
+      switch (GameData.status) {
+        case 'LOBBY': adminTriggerQuestion(); break;
+        case 'QUESTION': adminLockAnswers(); break;
+        case 'LOCKED': adminRevealAnswer(); break;
+        case 'REVEAL': adminNextQuestion(); break;
+      }
+    }
+
+    function renderHostHud() {
+      const st = document.getElementById('hud-status');
+      if (!st) return;
+      const n = GameData.currentQIndex + 1;
+      const map = {
+        LOBBY: ['รอเปิดข้อ ' + n, 'เปิดคำถาม'],
+        QUESTION: ['ข้อ ' + n + ' กำลังตอบ ⏱ ' + GameData.timer + ' วิ', 'ปิดรับคำตอบ'],
+        LOCKED: ['ข้อ ' + n + ' ปิดรับแล้ว', 'แสดงเฉลย'],
+        REVEAL: ['ข้อ ' + n + ' เฉลยแล้ว', 'ข้อถัดไป'],
+        RANKING: ['แสดงอันดับ', '-']
+      };
+      const m = map[GameData.status] || ['', '-'];
+      st.innerText = m[0] + '  |  Space = ' + m[1];
+      const sel = document.getElementById('hud-proj-select');
+      if (sel) sel.value = GameData.projectorScreen || 'AUTO';
+    }
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isHost || currentView !== 'projector') return;
+      const hud = document.getElementById('host-hud');
+      const near = e.clientY > window.innerHeight - 90 || (hud && hud.matches(':hover'));
+      setHud(hudPinned || near);
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (!isHost || currentView !== 'projector') return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const tag = (e.target && e.target.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      const k = e.key.toLowerCase();
+      const screens = { '0': 'AUTO', '1': 'LOBBY', '2': 'QUESTION', '3': 'REVEAL', '4': 'RANKING' };
+      if (k === ' ' || k === 'enter' || k === 'arrowright') { e.preventDefault(); hostAdvance(); }
+      else if (screens[k]) { adminSetProjectorScreen(screens[k]); }
+      else if (k === 'h') { hudPinned = !hudPinned; setHud(hudPinned); }
+      else if (k === 'f') {
+        if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {});
+      }
+    });
 
     function showToast(message, isError = false) {
       const toast = document.getElementById('custom-toast');
@@ -1224,6 +1296,7 @@
       renderProjectorView();
       renderPlayerView();
       renderAdminView();
+      renderHostHud();
     }
 
     // =========================================================================
@@ -2081,5 +2154,26 @@
       renderQRCode();
     };
   </script>
+
+  <!-- HOST HUD: แถบควบคุมลอยสำหรับแอดมินตอนใช้จอเดียว (เลื่อนเมาส์ลงขอบล่าง หรือกด H) -->
+  <div id="host-hud" class="hidden fixed bottom-0 inset-x-0 z-[60] translate-y-full transition-transform duration-200 pointer-events-none">
+    <div class="pointer-events-auto mx-auto max-w-5xl m-3 p-2 rounded-2xl bg-arena-900/95 border border-arena-600 shadow-2xl backdrop-blur flex flex-wrap items-center justify-center gap-2 text-xs"
+         onclick="const b=event.target.closest('button'); if(b) b.blur();">
+      <span id="hud-status" class="px-2 text-amber-300 font-bold"></span>
+      <button onclick="adminTriggerQuestion()" class="px-3 py-2 rounded-lg bg-arena-800 border border-arena-600 text-white font-bold hover:bg-arena-700">▶ เปิดคำถาม</button>
+      <button onclick="adminLockAnswers()" class="px-3 py-2 rounded-lg bg-arena-800 border border-arena-600 text-white font-bold hover:bg-arena-700">🔒 ปิดรับ</button>
+      <button onclick="adminRevealAnswer()" class="px-3 py-2 rounded-lg bg-arena-800 border border-arena-600 text-white font-bold hover:bg-arena-700">✔ เฉลย</button>
+      <button onclick="adminNextQuestion()" class="px-3 py-2 rounded-lg bg-arena-800 border border-arena-600 text-white font-bold hover:bg-arena-700">⏭ ถัดไป</button>
+      <select id="hud-proj-select" onchange="adminSetProjectorScreen(this.value); this.blur()" class="bg-arena-950 border border-arena-600 rounded-lg px-2 py-2 text-white font-bold">
+        <option value="AUTO">หน้าจอ: อัตโนมัติ</option>
+        <option value="LOBBY">หน้าจอ: Lobby</option>
+        <option value="QUESTION">หน้าจอ: คำถาม</option>
+        <option value="REVEAL">หน้าจอ: เฉลย</option>
+        <option value="RANKING">หน้าจอ: อันดับ</option>
+      </select>
+      <button onclick="switchView('admin')" class="px-3 py-2 rounded-lg bg-amber-500 text-black font-bold hover:bg-amber-400">⚙ แอดมิน</button>
+      <span class="w-full text-center text-[10px] text-gray-500">คีย์ลัด: Space/Enter = ขั้นถัดไป • 0-4 = เลือกหน้าจอ • H = ปักแถบ • F = เต็มจอ</span>
+    </div>
+  </div>
 </body>
 </html>
