@@ -1998,6 +1998,19 @@
       if (REMOTE && !isHost) {
         const b = document.getElementById('btn-tab-admin');
         if (b) b.classList.add('hidden');
+        // ปุ่มเล็กมุมขวาล่าง: กดแล้วใส่รหัสแอดมินเพื่อเข้าหน้าควบคุม
+        const ab = document.createElement('button');
+        ab.innerHTML = '<i class="fa-solid fa-lock"></i> ผู้ดูแลระบบ';
+        ab.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:50;font-size:12px;padding:6px 12px;border-radius:999px;background:rgba(30,41,59,.85);color:#cbd5e1;border:1px solid #334155;opacity:.45;cursor:pointer;';
+        ab.onmouseenter = () => ab.style.opacity = '1';
+        ab.onmouseleave = () => ab.style.opacity = '.45';
+        ab.onclick = () => {
+          const k = prompt('ใส่รหัสผู้ดูแลระบบ');
+          if (k === null) return;
+          if (k === HOST_KEY) window.location.href = window.location.pathname + '?view=admin&key=' + encodeURIComponent(k);
+          else alert('รหัสไม่ถูกต้อง');
+        };
+        document.body.appendChild(ab);
       }
       // Check query param for default view (e.g. ?view=projector or ?view=admin)
       const params = new URLSearchParams(window.location.search);
