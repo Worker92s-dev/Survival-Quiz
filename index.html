@@ -1154,8 +1154,9 @@
         }
       });
       if (REMOTE && !isHost) {
-        const ab = document.getElementById('btn-tab-admin');
-        if (ab) ab.classList.add('hidden');
+        // ผู้เล่น/โปรเจกเตอร์: ซ่อนแถบแท็บทั้งหมด (เหลือเฉพาะหน้า Admin ที่มีแท็บ)
+        const bar = document.getElementById('btn-tab-player').parentElement;
+        if (bar) bar.classList.add('hidden');
       }
 
       if (viewName === 'projector') {
