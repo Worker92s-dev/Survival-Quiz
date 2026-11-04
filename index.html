@@ -1112,7 +1112,8 @@
         if (stage === 'RANKING') return 'ranking';
         return null; // ล็อกคำตอบ / เฉลย = เงียบ เพื่อให้ได้ยินเสียงถูก-ผิด
       },
-      shouldPlayHere() { return currentView === 'projector' || this.preview; },
+      // หน้าต่างพรีวิว (iframe ในแผงแอดมิน) ไม่เล่นเพลง กันเสียงซ้อนกับหน้าต่างโปรเจกเตอร์จริง
+      shouldPlayHere() { if (_qs.get('preview') === '1') return false; return currentView === 'projector' || this.preview; },
 
       sync() {
         const m = GameData.music || {};
