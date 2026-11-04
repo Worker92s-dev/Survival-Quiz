@@ -160,7 +160,7 @@
       </div>
 
       <form id="player-join-form" onsubmit="handlePlayerJoin(event)" class="space-y-4">
-        <div>
+        <div id="player-pin-wrap">
           <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Game PIN 4 หลัก</label>
           <input type="text" id="player-input-pin" required maxlength="6" placeholder="เช่น 9999" class="w-full text-center text-2xl tracking-widest font-mono font-bold bg-arena-950 border border-arena-700 rounded-xl px-4 py-3 text-amber-400 focus:outline-none focus:border-amber-400 transition" />
         </div>
@@ -339,6 +339,7 @@
           <div class="bg-white p-4 rounded-2xl shadow-2xl flex flex-col items-center">
             <div id="proj-qrcode-container" class="w-48 h-48 flex items-center justify-center"></div>
             <p class="text-[11px] font-bold text-gray-800 mt-2 font-mono">SCAN TO JOIN NOW</p>
+            <p id="proj-join-url" class="text-[10px] text-gray-600 mt-1 font-mono break-all max-w-[200px] mx-auto leading-tight"></p>
           </div>
 
           <div class="text-left space-y-4">
@@ -512,6 +513,37 @@
       </div>
     </div>
 
+    <!-- Room & Join QR -->
+    <div class="bg-arena-900/90 border border-arena-700/80 rounded-2xl p-4 md:p-6">
+      <h3 class="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-door-open text-amber-400"></i> ห้องเล่น & QR ให้นักเรียนสแกนเข้าห้อง
+      </h3>
+      <div class="flex flex-wrap gap-5 items-start">
+        <div class="shrink-0 text-center">
+          <div id="adm-room-qr" class="bg-white p-2 rounded-xl inline-block w-[166px] h-[166px]"></div>
+          <div class="text-[11px] text-gray-500 mt-1">สแกนเพื่อเข้าห้องนี้</div>
+        </div>
+        <div class="flex-1 min-w-[260px] space-y-3 text-xs">
+          <div>
+            <div class="text-gray-400">รหัสห้องปัจจุบัน</div>
+            <div id="adm-room-code" class="font-mono font-black text-4xl text-amber-400 tracking-widest">-</div>
+          </div>
+          <div class="flex gap-2">
+            <input id="adm-room-url" readonly class="flex-1 min-w-0 bg-arena-950 border border-arena-700 rounded-lg px-3 py-2 text-gray-300 font-mono text-[11px]" />
+            <button onclick="copyRoomLink()" class="px-3 py-2 rounded-lg bg-arena-800 border border-arena-600 text-white font-bold hover:bg-arena-700"><i class="fa-solid fa-copy mr-1"></i> คัดลอก</button>
+          </div>
+          <div class="flex flex-wrap gap-2 items-center">
+            <input id="adm-room-custom" maxlength="24" placeholder="ตั้งรหัสห้องเอง (A-Z, 0-9) หรือเว้นว่างให้สุ่ม" class="flex-1 min-w-[200px] bg-arena-950 border border-arena-700 rounded-lg px-3 py-2 text-white uppercase" />
+            <button onclick="adminCreateRoom()" class="px-4 py-2 rounded-lg bg-amber-500 text-black font-bold hover:bg-amber-400"><i class="fa-solid fa-plus mr-1"></i> สร้างห้องใหม่</button>
+          </div>
+          <div class="flex flex-wrap gap-2 items-center">
+            <select id="adm-room-recent" onchange="adminSwitchRoom(this.value)" class="bg-arena-950 border border-arena-700 rounded-lg px-3 py-2 text-white"></select>
+            <span class="text-[11px] text-gray-500">ห้องแต่ละห้องแยกจากกัน เปิดหลายห้องพร้อมกันได้ สร้างห้องแล้ว QR บนหน้าโปรเจกเตอร์จะเป็นของห้องนั้นอัตโนมัติ</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Game Step Workflow Bar (Step-by-step game progression) -->
     <div class="bg-arena-900/90 border border-arena-700/80 rounded-2xl p-4 md:p-6">
       <h3 class="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -555,7 +587,7 @@
           <span id="adm-proj-mode-label" class="text-[11px] text-gray-400"></span>
           <span class="flex items-center gap-2">
             <button onclick="switchView('projector')" class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px] font-bold hover:bg-amber-500/30"><i class="fa-solid fa-expand mr-1"></i> เปิดโหมดเวที (จอเดียว)</button>
-            <button onclick="window.open(window.location.pathname + '?view=projector', '_blank')" class="px-2.5 py-1 rounded-lg bg-arena-800 text-gray-300 border border-arena-600 text-[11px] hover:bg-arena-700">หน้าต่างแยก (2 จอ)</button>
+            <button onclick="openProjectorWindow()" class="px-2.5 py-1 rounded-lg bg-arena-800 text-gray-300 border border-arena-600 text-[11px] hover:bg-arena-700">หน้าต่างแยก (2 จอ)</button>
           </span>
         </div>
         <div class="grid grid-cols-3 sm:grid-cols-5 gap-2 text-xs">
@@ -1058,15 +1090,19 @@
     // =========================================================================
     const SUPABASE_URL = 'https://pvfedavmvktfkrwxbsif.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_7KUuKB11yyzIjLfMZEOJCQ_sCh5Qo5h';
-    const ROOM = 'survival-quiz-room';      // ชื่อห้อง (เปลี่ยนได้ ถ้าหลายห้องเล่นพร้อมกัน)
     const HOST_KEY = 'SENATE-SIMULATION';           // รหัสผู้คุมเกม: เปิด ?view=admin&key=รหัสนี้
 
     const REMOTE = !!(window.supabase && SUPABASE_URL && !SUPABASE_URL.includes('YOUR-PROJECT'));
     const _qs = new URLSearchParams(window.location.search);
+    // ห้อง: ถ้าลิงก์มี ?room=XXXX จะเข้า "ห้องนั้น" (แต่ละห้องแยกช่อง Supabase ของตัวเอง) ไม่งั้นใช้ห้องหลักแบบเดิม
+    const ROOM_CODE = (_qs.get('room') || '').replace(/[^A-Za-z0-9_-]/g, '').toUpperCase().slice(0, 24) || null;
+    const ROOM_MODE = !!ROOM_CODE;
+    const ROOM = ROOM_MODE ? 'r-' + ROOM_CODE : 'survival-quiz-room';
+    if (ROOM_MODE) GameData.pin = ROOM_CODE;
     let _hk = _qs.get('key');
     try { if (_hk) sessionStorage.setItem('sq_hostkey', _hk); else _hk = sessionStorage.getItem('sq_hostkey'); } catch (e) {}
     const isHost = !REMOTE || (_qs.get('view') === 'admin' && _hk === HOST_KEY);
-    if (_qs.get('key')) { try { history.replaceState(null, '', window.location.pathname + '?view=' + (_qs.get('view') || 'admin')); } catch (e) {} }
+    if (_qs.get('key')) { try { history.replaceState(null, '', window.location.pathname + '?view=' + (_qs.get('view') || 'admin') + (ROOM_MODE ? '&room=' + encodeURIComponent(ROOM_CODE) : '')); } catch (e) {} }
     let sb = null, downCh = null, upCh = null, downReady = false;
     let dirty = false, flushTimer = null, localTick = null;
 
@@ -1080,7 +1116,7 @@
 
     // Initialize BroadcastChannel for Zero-Lag Multi-Window Sync
     if (!REMOTE) try {
-      syncChannel = new BroadcastChannel('survival_quiz_channel');
+      syncChannel = new BroadcastChannel('survival_quiz_channel:' + ROOM);
       syncChannel.onmessage = (event) => {
         if (event.data && event.data.type === 'STATE_UPDATE') {
           // Replace state from master host
@@ -1099,7 +1135,7 @@
       if (downCh && downReady) {
         downCh.send({ type: 'broadcast', event: 'state', payload: GameData });
       }
-      try { localStorage.setItem('sq_host_state', JSON.stringify(GameData)); } catch (e) {}
+      try { localStorage.setItem('sq_host_state:' + ROOM, JSON.stringify(GameData)); } catch (e) {}
     }
 
     // Host: รวมการอัปเดตจาก JOIN/ANSWER แล้วส่งทุก 3 วินาที (กันข้อความท่วมตอนคน 200 เข้าพร้อมกัน)
@@ -1164,6 +1200,65 @@
     }
 
     // =========================================================================
+    // ROOMS & JOIN QR
+    // =========================================================================
+    function roomQS() { return ROOM_CODE ? '&room=' + encodeURIComponent(ROOM_CODE) : ''; }
+    function baseUrl() { return window.location.href.split(/[?#]/)[0]; }
+    function getJoinUrl() { return baseUrl() + '?view=player' + roomQS(); }
+    function openProjectorWindow() { window.open(baseUrl() + '?view=projector' + roomQS(), '_blank'); }
+
+    function genRoomCode() {
+      const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // ตัดตัวอักษรที่สับสน (0/O, 1/I)
+      let r = '';
+      for (let i = 0; i < 6; i++) r += c[Math.floor(Math.random() * c.length)];
+      return r;
+    }
+    function loadRooms() { try { return JSON.parse(localStorage.getItem('sq_rooms') || '[]'); } catch (e) { return []; } }
+    function saveRoom(code) {
+      try {
+        const list = loadRooms().filter(r => r.code !== code);
+        list.unshift({ code: code, t: Date.now() });
+        localStorage.setItem('sq_rooms', JSON.stringify(list.slice(0, 12)));
+      } catch (e) {}
+    }
+    function goRoom(code) {
+      saveRoom(code);
+      window.location.href = baseUrl() + '?view=admin&room=' + encodeURIComponent(code);
+    }
+    function adminCreateRoom() {
+      const input = document.getElementById('adm-room-custom');
+      const raw = (input.value || '').trim();
+      let code = raw.replace(/[^A-Za-z0-9_-]/g, '').toUpperCase().slice(0, 24);
+      if (raw && !code) { showToast('รหัสห้องใช้ได้เฉพาะ A-Z, 0-9, - และ _', true); return; }
+      if (!code) code = genRoomCode();
+      if (code === ROOM_CODE) { showToast('คุณอยู่ในห้องนี้อยู่แล้ว', true); return; }
+      if (GameData.players.length > 0 && !confirm('สร้างห้องใหม่ "' + code + '" ?\nผู้เล่นในห้องปัจจุบันจะไม่ตามไปห้องใหม่ (ห้องเก่ายังอยู่ กลับมาเลือกได้)')) return;
+      goRoom(code);
+    }
+    function adminSwitchRoom(code) { if (code && code !== ROOM_CODE) goRoom(code); }
+    function copyRoomLink() {
+      const url = getJoinUrl();
+      const done = () => showToast('คัดลอกลิงก์เข้าห้องแล้ว');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(done).catch(() => { const i = document.getElementById('adm-room-url'); i.select(); document.execCommand('copy'); done(); });
+      } else { const i = document.getElementById('adm-room-url'); i.select(); document.execCommand('copy'); done(); }
+    }
+    function renderAdminRoomPanel() {
+      const box = document.getElementById('adm-room-qr');
+      if (!box) return;
+      const url = getJoinUrl();
+      box.innerHTML = '';
+      try {
+        new QRCode(box, { text: url, width: 150, height: 150, colorDark: '#0B0F1E', colorLight: '#FFFFFF', correctLevel: QRCode.CorrectLevel.M });
+      } catch (e) {}
+      document.getElementById('adm-room-code').innerText = ROOM_CODE || 'ห้องหลัก';
+      document.getElementById('adm-room-url').value = url;
+      const sel = document.getElementById('adm-room-recent');
+      sel.innerHTML = '<option value="">— ห้องที่เคยสร้าง —</option>' +
+        loadRooms().map(r => '<option value="' + r.code + '"' + (r.code === ROOM_CODE ? ' selected' : '') + '>' + r.code + '</option>').join('');
+    }
+
+    // =========================================================================
     // VIEW SWITCHER
     // =========================================================================
     function switchView(viewName) {
@@ -1192,6 +1287,7 @@
       if (viewName === 'projector') {
         renderQRCode();
       }
+      if (viewName === 'admin' && isHost) renderAdminRoomPanel();
       currentView = viewName;
 
       // Host Stage Mode: โชว์หน้าโปรเจกเตอร์ในหน้าต่างเดียวกับแอดมิน ซ่อนแถบหัวเว็บ + มีแถบควบคุมลอยเรียกใช้ด้วยเมาส์/คีย์ลัด
@@ -1307,7 +1403,7 @@
       const pinInput = document.getElementById('player-input-pin').value.trim();
       const nameInput = document.getElementById('player-input-name').value.trim();
 
-      if (pinInput !== GameData.pin) {
+      if (!ROOM_MODE && pinInput !== GameData.pin) {
         showToast("Game PIN ไม่ถูกต้อง โปรดดูบนหน้าจอโปรเจกเตอร์", true);
         return;
       }
@@ -1327,7 +1423,7 @@
         totalTimeTaken: 0
       };
 
-      try { localStorage.setItem('sq_player', JSON.stringify({ id: myPlayerId, name: nameInput })); } catch (e) {}
+      try { localStorage.setItem('sq_player:' + ROOM, JSON.stringify({ id: myPlayerId, name: nameInput })); } catch (e) {}
       broadcastPlayerAction({
         type: 'JOIN',
         player: newPlayer
@@ -1473,7 +1569,7 @@
       container.innerHTML = "";
       try {
         new QRCode(container, {
-          text: window.location.origin + window.location.pathname + '?view=player',
+          text: getJoinUrl(),
           width: 180,
           height: 180,
           colorDark: "#0B0F1E",
@@ -1484,6 +1580,8 @@
         container.innerHTML = `<div class="text-xs text-black font-bold p-4">QR CODE READY<br>${window.location.host}</div>`;
       }
       document.getElementById('proj-big-pin').innerText = GameData.pin;
+      const ju = document.getElementById('proj-join-url');
+      if (ju) ju.innerText = getJoinUrl().replace(/^https?:\/\//, '');
     }
 
     function updateProjectorStats() {
@@ -2053,9 +2151,10 @@
       }
       if (isHost) {
         try {
-          const saved = JSON.parse(localStorage.getItem('sq_host_state') || 'null');
+          const saved = JSON.parse(localStorage.getItem('sq_host_state:' + ROOM) || 'null');
           if (saved && saved.players) {
             GameData = saved;
+            if (ROOM_MODE) GameData.pin = ROOM_CODE;
             if (GameData.status === 'QUESTION') GameData.status = 'LOCKED';
           }
         } catch (e) {}
@@ -2085,7 +2184,7 @@
           else {
             broadcastPlayerAction({ type: 'HELLO' });
             try {
-              const me = JSON.parse(localStorage.getItem('sq_player') || 'null');
+              const me = JSON.parse(localStorage.getItem('sq_player:' + ROOM) || 'null');
               if (me && me.id && me.name) {
                 myPlayerId = me.id;
                 document.getElementById('player-join-card').classList.add('hidden');
@@ -2105,6 +2204,13 @@
     // Initial Window Load
     window.onload = function() {
       initTransport();
+      if (ROOM_MODE) {
+        if (isHost) saveRoom(ROOM_CODE);
+        const pw = document.getElementById('player-pin-wrap');
+        if (pw) pw.classList.add('hidden');
+        const pi = document.getElementById('player-input-pin');
+        if (pi) pi.required = false;
+      }
       if (REMOTE && !isHost) {
         const b = document.getElementById('btn-tab-admin');
         if (b) b.classList.add('hidden');
@@ -2132,7 +2238,7 @@
           const submit = () => {
             if (pw.value === HOST_KEY) {
               try { sessionStorage.setItem('sq_hostkey', pw.value); } catch (e) {}
-              window.location.href = window.location.pathname + '?view=admin';
+              window.location.href = window.location.pathname + '?view=admin' + roomQS();
             } else {
               document.getElementById('admin-err').innerText = 'รหัสไม่ถูกต้อง';
               pw.value = '';
