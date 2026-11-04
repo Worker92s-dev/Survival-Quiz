@@ -548,6 +548,22 @@
         </button>
       </div>
 
+      <!-- Projector Screen Selector -->
+      <div class="mt-4 p-3 bg-arena-950 rounded-xl border border-arena-800">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <span class="text-xs font-bold text-gray-300"><i class="fa-solid fa-chalkboard-user text-amber-400 mr-1"></i> หน้าจอโปรเจกเตอร์ตอนนี้</span>
+          <span id="adm-proj-mode-label" class="text-[11px] text-gray-400"></span>
+        </div>
+        <div class="grid grid-cols-5 gap-2 text-xs">
+          <button data-proj="AUTO" onclick="adminSetProjectorScreen('AUTO')" class="adm-proj-btn px-2 py-2 rounded-lg border font-bold transition">🔄 อัตโนมัติ</button>
+          <button data-proj="LOBBY" onclick="adminSetProjectorScreen('LOBBY')" class="adm-proj-btn px-2 py-2 rounded-lg border font-bold transition">Lobby</button>
+          <button data-proj="QUESTION" onclick="adminSetProjectorScreen('QUESTION')" class="adm-proj-btn px-2 py-2 rounded-lg border font-bold transition">คำถาม</button>
+          <button data-proj="REVEAL" onclick="adminSetProjectorScreen('REVEAL')" class="adm-proj-btn px-2 py-2 rounded-lg border font-bold transition">เฉลย</button>
+          <button data-proj="RANKING" onclick="adminSetProjectorScreen('RANKING')" class="adm-proj-btn px-2 py-2 rounded-lg border font-bold transition">อันดับ</button>
+        </div>
+        <p class="text-[11px] text-gray-500 mt-2">เลือกหน้าอื่นนอกจาก "อัตโนมัติ" = ล็อกหน้าจอ ไม่เปลี่ยนตามปุ่มขั้นตอน (ผู้เล่นยังเล่นตามสถานะเกมปกติ) กด "อัตโนมัติ" เพื่อกลับไปตามสถานะเกม</p>
+      </div>
+
       <!-- Current Question Quick Info & Timer Adjuster -->
       <div class="mt-4 p-3 bg-arena-950 rounded-xl border border-arena-800 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div class="flex items-center gap-2">
@@ -1028,6 +1044,7 @@
       timer: 20,
       totalTime: 20,
       roundStats: { correct: 0, wrong: 0, eliminated: 0 },
+      projectorScreen: "AUTO", // AUTO = ตามสถานะเกม | LOBBY | QUESTION | REVEAL | RANKING = แอดมินล็อกหน้าจอเอง
       questions: JSON.parse(JSON.stringify(DEFAULT_QUESTIONS)),
       players: [] // Array of { id, name, lives: 2, eliminated: false, answers: {}, score: 0, totalTimeTaken: 0 }
     };
@@ -1419,27 +1436,29 @@
       document.getElementById('proj-submitted-progress').style.width = `${percent}%`;
     }
 
+    // หน้าจอโปรเจกเตอร์ที่จะแสดงจริง: ถ้าแอดมินเลือกเอง (ไม่ใช่ AUTO) ใช้ตามนั้น ไม่งั้นตามสถานะเกม
+    function getProjectorStage() {
+      const o = GameData.projectorScreen || 'AUTO';
+      if (o !== 'AUTO') return o;
+      if (GameData.status === 'QUESTION' || GameData.status === 'LOCKED') return 'QUESTION';
+      return GameData.status; // LOBBY, REVEAL, RANKING
+    }
+
     function renderProjectorView() {
       updateProjectorStats();
 
-      const stageLobby = document.getElementById('proj-stage-lobby');
-      const stageQuestion = document.getElementById('proj-stage-question');
-      const stageReveal = document.getElementById('proj-stage-reveal');
-      const stageRanking = document.getElementById('proj-stage-ranking');
+      const stage = getProjectorStage();
+      const stages = {
+        LOBBY: document.getElementById('proj-stage-lobby'),
+        QUESTION: document.getElementById('proj-stage-question'),
+        REVEAL: document.getElementById('proj-stage-reveal'),
+        RANKING: document.getElementById('proj-stage-ranking')
+      };
+      Object.keys(stages).forEach(k => stages[k].classList.toggle('hidden', k !== stage));
 
       const currentQ = GameData.questions[GameData.currentQIndex];
 
-      if (GameData.status === 'LOBBY') {
-        stageLobby.classList.remove('hidden');
-        stageQuestion.classList.add('hidden');
-        stageReveal.classList.add('hidden');
-        stageRanking.classList.add('hidden');
-      } else if (GameData.status === 'QUESTION' || GameData.status === 'LOCKED') {
-        stageLobby.classList.add('hidden');
-        stageQuestion.classList.remove('hidden');
-        stageReveal.classList.add('hidden');
-        stageRanking.classList.add('hidden');
-
+      if (stage === 'QUESTION' && currentQ) {
         document.getElementById('proj-q-round').innerText = currentQ.round;
         document.getElementById('proj-q-num').innerText = GameData.currentQIndex + 1;
         document.getElementById('proj-q-text').innerText = currentQ.prompt;
@@ -1454,12 +1473,7 @@
         }
 
         updateProjectorSubmissionProgress();
-      } else if (GameData.status === 'REVEAL') {
-        stageLobby.classList.add('hidden');
-        stageQuestion.classList.add('hidden');
-        stageReveal.classList.remove('hidden');
-        stageRanking.classList.add('hidden');
-
+      } else if (stage === 'REVEAL' && currentQ) {
         const optLetters = ['A', 'B', 'C', 'D'];
         document.getElementById('proj-reveal-correct-title').innerText = `${optLetters[currentQ.correct]}: ${currentQ.options[currentQ.correct]}`;
         document.getElementById('proj-reveal-explanation').innerText = currentQ.explanation;
@@ -1467,14 +1481,17 @@
         document.getElementById('proj-round-correct-cnt').innerText = GameData.roundStats.correct;
         document.getElementById('proj-round-wrong-cnt').innerText = GameData.roundStats.wrong;
         document.getElementById('proj-round-new-eliminated-cnt').innerText = GameData.roundStats.eliminated;
-      } else if (GameData.status === 'RANKING') {
-        stageLobby.classList.add('hidden');
-        stageQuestion.classList.add('hidden');
-        stageReveal.classList.add('hidden');
-        stageRanking.classList.remove('hidden');
-
+      } else if (stage === 'RANKING') {
         renderLeaderboardTable();
       }
+    }
+
+    // แอดมินเลือกหน้าจอโปรเจกเตอร์ (ทำได้ทุกเมื่อ แม้ตอนกดเปิดคำถาม)
+    function adminSetProjectorScreen(mode) {
+      GameData.projectorScreen = mode;
+      broadcastState();
+      const names = { AUTO: 'อัตโนมัติ (ตามสถานะเกม)', LOBBY: 'Lobby', QUESTION: 'คำถาม', REVEAL: 'เฉลย', RANKING: 'อันดับ' };
+      showToast('โปรเจกเตอร์: ' + names[mode]);
     }
 
     function renderLeaderboardTable() {
@@ -1671,6 +1688,7 @@
     function adminResetGame() {
       clearInterval(timerInterval);
       GameData.status = 'LOBBY';
+      GameData.projectorScreen = 'AUTO';
       GameData.currentQIndex = 0;
       GameData.timer = 20;
       // Reset players lives
@@ -1808,6 +1826,15 @@
       if (curQ) {
         document.getElementById('adm-current-q-title').innerText = `${curQ.round} - ${curQ.prompt}`;
       }
+
+      const pm = GameData.projectorScreen || 'AUTO';
+      document.querySelectorAll('.adm-proj-btn').forEach(b => {
+        const on = b.dataset.proj === pm;
+        b.className = 'adm-proj-btn px-2 py-2 rounded-lg border font-bold transition ' +
+          (on ? 'bg-gold-500 text-black border-gold-400' : 'bg-arena-800 text-gray-300 border-arena-600 hover:bg-arena-700');
+      });
+      const lbl = document.getElementById('adm-proj-mode-label');
+      if (lbl) lbl.innerText = pm === 'AUTO' ? 'โหมด: ตามสถานะเกม (' + getProjectorStage() + ')' : 'โหมด: ล็อกด้วยมือ';
 
       renderAdminQuestionsTable();
       renderAdminPlayers();
