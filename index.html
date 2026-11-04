@@ -337,7 +337,7 @@
         <!-- QR Code & PIN Area -->
         <div class="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-14 my-6">
           <div class="bg-white p-4 rounded-2xl shadow-2xl flex flex-col items-center">
-            <div id="proj-qrcode-container" class="w-48 h-48 flex items-center justify-center"></div>
+            <div id="proj-qrcode-container" onclick="openQrOverlay()" title="คลิกเพื่อขยาย" class="w-48 h-48 flex items-center justify-center cursor-zoom-in"></div>
             <p class="text-[11px] font-bold text-gray-800 mt-2 font-mono">SCAN TO JOIN NOW</p>
             <p id="proj-join-url" class="text-[10px] text-gray-600 mt-1 font-mono break-all max-w-[200px] mx-auto leading-tight"></p>
           </div>
@@ -520,8 +520,8 @@
       </h3>
       <div class="flex flex-wrap gap-5 items-start">
         <div class="shrink-0 text-center">
-          <div id="adm-room-qr" class="bg-white p-2 rounded-xl inline-block w-[166px] h-[166px]"></div>
-          <div class="text-[11px] text-gray-500 mt-1">สแกนเพื่อเข้าห้องนี้</div>
+          <div id="adm-room-qr" onclick="openQrOverlay()" title="คลิกเพื่อขยาย" class="bg-white p-2 rounded-xl inline-block w-[166px] h-[166px] cursor-zoom-in hover:ring-4 hover:ring-amber-400 transition"></div>
+          <div class="text-[11px] text-gray-500 mt-1">สแกนเพื่อเข้าห้องนี้ • คลิก QR เพื่อขยายเต็มจอ</div>
         </div>
         <div class="flex-1 min-w-[260px] space-y-3 text-xs">
           <div>
@@ -1243,6 +1243,31 @@
         navigator.clipboard.writeText(url).then(done).catch(() => { const i = document.getElementById('adm-room-url'); i.select(); document.execCommand('copy'); done(); });
       } else { const i = document.getElementById('adm-room-url'); i.select(); document.execCommand('copy'); done(); }
     }
+    // คลิก QR เพื่อขยายเต็มจอ (คลิกที่ใดก็ได้หรือกด Esc เพื่อปิด)
+    function closeQrOverlay() {
+      const o = document.getElementById('qr-overlay');
+      if (o) o.remove();
+    }
+    function openQrOverlay() {
+      if (document.getElementById('qr-overlay')) return;
+      const url = getJoinUrl();
+      const size = Math.max(200, Math.min(Math.floor(window.innerWidth * 0.85), Math.floor(window.innerHeight * 0.62), 760));
+      const o = document.createElement('div');
+      o.id = 'qr-overlay';
+      o.style.cssText = 'position:fixed;inset:0;z-index:200;background:rgba(6,9,19,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;cursor:zoom-out;padding:16px;text-align:center;';
+      o.innerHTML =
+        '<div id="qr-overlay-box" style="background:#fff;padding:18px;border-radius:20px;line-height:0"></div>' +
+        '<div style="font-family:Kanit,sans-serif;font-weight:900;font-size:clamp(28px,6vw,64px);color:#FBBF24;letter-spacing:.15em">' + (ROOM_CODE || GameData.pin) + '</div>' +
+        '<div style="font-family:monospace;font-size:clamp(11px,1.6vw,18px);color:#9CA3AF;word-break:break-all;max-width:90vw">' + url.replace(/^https?:\/\//, '') + '</div>' +
+        '<div style="font-size:12px;color:#6B7280">คลิกที่ใดก็ได้ หรือกด Esc เพื่อปิด</div>';
+      o.onclick = closeQrOverlay;
+      document.body.appendChild(o);
+      try {
+        new QRCode(document.getElementById('qr-overlay-box'), { text: url, width: size, height: size, colorDark: '#0B0F1E', colorLight: '#FFFFFF', correctLevel: QRCode.CorrectLevel.M });
+      } catch (e) {}
+    }
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeQrOverlay(); });
+
     function renderAdminRoomPanel() {
       const box = document.getElementById('adm-room-qr');
       if (!box) return;
@@ -1348,6 +1373,7 @@
     document.addEventListener('keydown', (e) => {
       if (!isHost || currentView !== 'projector') return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (document.getElementById('qr-overlay')) return;
       const tag = (e.target && e.target.tagName) || '';
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       const k = e.key.toLowerCase();
