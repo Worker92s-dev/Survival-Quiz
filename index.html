@@ -1609,7 +1609,7 @@
     // =========================================================================
     function roomQS() { return ROOM_CODE ? '&room=' + encodeURIComponent(ROOM_CODE) : ''; }
     function baseUrl() { return window.location.href.split(/[?#]/)[0]; }
-    function getJoinUrl() { return baseUrl() + '?view=player' + roomQS(); }
+    function getJoinUrl() { return baseUrl() + '?view=player' + roomQS() + '&join=1'; }
     function openProjectorWindow() { window.open(baseUrl() + '?view=projector' + roomQS(), '_blank'); }
 
     function genRoomCode() {
@@ -2802,6 +2802,11 @@
     window.onload = function() {
       initTransport();
       renderWelcomeHowTo();
+      // หน้าแรก (ลิงก์ทั่วไป) = ชื่อเกม + วิธีเล่นเท่านั้น; ฟอร์มลงทะเบียนโผล่เฉพาะลิงก์/QR ที่แอดมินสร้าง (มี join=1)
+      if (!_qs.get('join')) {
+        const jc = document.getElementById('player-join-card');
+        if (jc) jc.classList.add('hidden');
+      }
       if (ROOM_MODE) {
         if (isHost) saveRoom(ROOM_CODE);
         const pw = document.getElementById('player-pin-wrap');
