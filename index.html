@@ -585,7 +585,7 @@
         <!-- Step 4: Next Question / Ranking -->
         <button onclick="adminNextQuestion()" id="adm-btn-next" class="p-4 rounded-xl text-left bg-arena-800 hover:bg-arena-700 border border-arena-600 font-bold text-white transition flex flex-col justify-between h-28">
           <span class="text-xs text-blue-400">ขั้นตอนที่ 4</span>
-          <span class="text-base font-display">ข้อถัดไป / แสดงตาราง</span>
+          <span class="text-base font-display">เปิดคำถามถัดไป</span>
           <i class="fa-solid fa-forward-step text-xl self-end text-blue-400"></i>
         </button>
       </div>
@@ -2336,12 +2336,15 @@
     }
 
     function adminNextQuestion() {
+      // กันกดซ้ำ/กดข้ามโดยไม่ตั้งใจ: ต้องเฉลยข้อปัจจุบันก่อน
+      if (GameData.status === 'QUESTION' || GameData.status === 'LOCKED') {
+        showToast('ต้องกด "แสดงเฉลย" ข้อปัจจุบันก่อน จึงจะไปข้อถัดไปได้', true);
+        return;
+      }
       clearInterval(timerInterval);
       if (GameData.currentQIndex + 1 < GameData.questions.length) {
         GameData.currentQIndex++;
-        GameData.status = 'LOBBY';
-        broadcastState();
-        showToast(`ไปยังคำถามที่ ${GameData.currentQIndex + 1} แล้ว`);
+        adminTriggerQuestion(); // เปิดข้อถัดไปและเริ่มจับเวลาทันที
       } else {
         adminShowLeaderboard();
       }
