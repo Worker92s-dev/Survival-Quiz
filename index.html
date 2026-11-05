@@ -560,7 +560,7 @@
         <i class="fa-solid fa-circle-nodes text-amber-400"></i> ลำดับการควบคุมคำถามปัจจุบัน
       </h3>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <!-- Step 1: Open Question -->
         <button onclick="adminTriggerQuestion()" id="adm-btn-open" class="p-4 rounded-xl text-left bg-arena-800 hover:bg-arena-700 border border-arena-600 font-bold text-white transition flex flex-col justify-between h-28">
           <span class="text-xs text-amber-400">ขั้นตอนที่ 1</span>
@@ -580,6 +580,13 @@
           <span class="text-xs text-emerald-400">ขั้นตอนที่ 3</span>
           <span class="text-base font-display">แสดงเฉลย & ตัดชีวิต</span>
           <i class="fa-solid fa-check-double text-xl self-end text-emerald-400"></i>
+        </button>
+
+        <!-- Step 4: Next Question / Ranking -->
+        <button onclick="adminNextQuestion()" id="adm-btn-next" class="p-4 rounded-xl text-left bg-arena-800 hover:bg-arena-700 border border-arena-600 font-bold text-white transition flex flex-col justify-between h-28">
+          <span class="text-xs text-blue-400">ขั้นตอนที่ 4</span>
+          <span class="text-base font-display">ข้อถัดไป / แสดงตาราง</span>
+          <i class="fa-solid fa-forward-step text-xl self-end text-blue-400"></i>
         </button>
       </div>
 
