@@ -374,6 +374,14 @@
           </div>
         </div>
 
+        <div id="proj-lobby-roster" class="mt-6 text-left">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs uppercase font-bold text-gray-400 tracking-wider"><i class="fa-solid fa-users mr-1"></i> เข้าห้องแล้ว <b id="lobby-roster-count" class="text-amber-400 text-lg">0</b> คน</p>
+            <button onclick="openRoster()" class="text-xs text-amber-400 hover:text-amber-300 underline">ดูทั้งหมด</button>
+          </div>
+          <div id="lobby-roster-chips" class="flex flex-wrap gap-1.5 overflow-y-auto" style="max-height:9.5rem"></div>
+        </div>
+
         <div class="mt-8 text-sm text-gray-400 animate-pulse">
           <i class="fa-solid fa-spinner fa-spin mr-2"></i> รอเจ้าหน้าที่เปิดสัญญาณเริ่มคำถามรอบแรก...
         </div>
@@ -759,7 +767,7 @@
       </div>
 
       <!-- Responsive Table -->
-      <div class="overflow-x-auto border border-arena-800 rounded-xl max-h-72">
+      <div class="overflow-auto border border-arena-800 rounded-xl max-h-[32rem]">
         <table class="w-full text-left text-xs text-gray-300">
           <thead class="bg-arena-950 text-gray-400 uppercase font-semibold">
             <tr>
@@ -2119,6 +2127,7 @@
       document.getElementById('proj-stat-eliminated').innerText = eliminated;
 
       document.getElementById('proj-active-survivors').innerText = alive;
+      if (typeof renderRosterUI === 'function') renderRosterUI();
     }
 
     function updateProjectorSubmissionProgress() {
@@ -2500,7 +2509,7 @@
       tbody.innerHTML = "";
       const filtered = GameData.players.filter(p => p.name.toLowerCase().includes(search));
 
-      filtered.slice(0, 50).forEach((p, idx) => {
+      filtered.forEach((p, idx) => {
         const ans = p.answers[GameData.currentQIndex];
         const optLetter = ans !== undefined ? ['A', 'B', 'C', 'D'][ans.choice] : '-';
 
@@ -2520,6 +2529,7 @@
         `;
         tbody.appendChild(tr);
       });
+      if (typeof renderRosterUI === 'function') renderRosterUI();
     }
 
     function renderAdminView() {
@@ -2807,6 +2817,74 @@
       });
     }
 
+    // =========================================================================
+    // ROSTER: ดูรายชื่อผู้เล่นทั้งหมด (ปุ่มลอยมุมซ้ายล่าง + แผงในหน้า Lobby)
+    // =========================================================================
+    function rosterChip(p) {
+      const s = document.createElement('span');
+      s.textContent = p.name;
+      s.className = 'px-2.5 py-1 rounded-lg text-xs font-bold border ' +
+        (p.eliminated ? 'bg-red-950/40 text-red-400 border-red-900 line-through'
+                      : 'bg-arena-800 text-white border-arena-600');
+      return s;
+    }
+    function renderRosterModal() {
+      const ps = GameData.players || [];
+      const q = (document.getElementById('roster-search').value || '').trim().toLowerCase();
+      document.getElementById('roster-total').textContent = ps.length;
+      const box = document.getElementById('roster-grid');
+      box.textContent = '';
+      ps.forEach((p, i) => {
+        if (q && !p.name.toLowerCase().includes(q)) return;
+        const d = document.createElement('div');
+        d.className = 'flex items-center gap-2 px-3 py-2 rounded-lg border text-sm ' +
+          (p.eliminated ? 'bg-red-950/30 border-red-900 text-gray-500 line-through' : 'bg-arena-800 border-arena-700 text-white');
+        const n = document.createElement('span');
+        n.className = 'text-[10px] font-mono text-gray-500 w-6 shrink-0';
+        n.textContent = i + 1;
+        const t = document.createElement('span');
+        t.className = 'truncate font-bold';
+        t.textContent = p.name;
+        d.appendChild(n); d.appendChild(t);
+        box.appendChild(d);
+      });
+      if (!box.children.length) {
+        const e = document.createElement('div');
+        e.className = 'col-span-full text-center text-gray-500 py-8 text-sm';
+        e.textContent = ps.length ? 'ไม่พบชื่อที่ค้นหา' : 'ยังไม่มีผู้เล่นเข้าห้อง';
+        box.appendChild(e);
+      }
+    }
+    function renderRosterUI() {
+      const ps = GameData.players || [];
+      const fab = document.getElementById('roster-fab-n'); if (fab) fab.textContent = ps.length;
+      const lc = document.getElementById('lobby-roster-count'); if (lc) lc.textContent = ps.length;
+      const chips = document.getElementById('lobby-roster-chips');
+      if (chips) {
+        chips.textContent = '';
+        for (let i = ps.length - 1; i >= 0; i--) chips.appendChild(rosterChip(ps[i])); // ล่าสุดอยู่หน้าสุด
+        if (!ps.length) {
+          const e = document.createElement('span');
+          e.className = 'text-xs text-gray-500'; e.textContent = 'รอผู้เล่นสแกน QR เข้าห้อง...';
+          chips.appendChild(e);
+        }
+      }
+      const m = document.getElementById('roster-modal');
+      if (m && !m.classList.contains('hidden')) renderRosterModal();
+    }
+    function openRoster() {
+      document.getElementById('roster-modal').classList.remove('hidden');
+      renderRosterModal();
+      const s = document.getElementById('roster-search'); if (s) s.focus();
+    }
+    function closeRoster() { document.getElementById('roster-modal').classList.add('hidden'); }
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeRoster(); });
+    window.addEventListener('load', () => {
+      // ปุ่มลอยแสดงเฉพาะแอดมิน/จอโปรเจกเตอร์ (ไม่แสดงให้ผู้เล่นทั่วไป)
+      if (isHost || _qs.get('view') === 'projector') document.getElementById('roster-fab').classList.remove('hidden');
+      renderRosterUI();
+    });
+
     // Initial Window Load
     window.onload = function() {
       initTransport();
@@ -2905,6 +2983,19 @@
       </select>
       <button onclick="switchView('admin')" class="px-3 py-2 rounded-lg bg-amber-500 text-black font-bold hover:bg-amber-400">⚙ แอดมิน</button>
       <span class="w-full text-center text-[10px] text-gray-500">คีย์ลัด: Space/Enter = ขั้นถัดไป • 0-5 = เลือกหน้าจอ (5 = วิธีเล่น) • H = ปักแถบ • F = เต็มจอ</span>
+    </div>
+  </div>
+  <button id="roster-fab" onclick="openRoster()" class="hidden fixed left-3 bottom-3 z-50 px-4 py-2 rounded-full bg-amber-500 text-black font-bold text-sm shadow-lg hover:bg-amber-400 flex items-center gap-2">
+    <i class="fa-solid fa-users"></i> รายชื่อ <span id="roster-fab-n" class="px-2 rounded-full bg-black/20">0</span>
+  </button>
+  <div id="roster-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" style="z-index:200" onclick="if(event.target===this)closeRoster()">
+    <div class="bg-arena-900 border border-arena-700 rounded-3xl w-full max-w-4xl shadow-2xl flex flex-col" style="max-height:90vh">
+      <div class="flex items-center justify-between gap-3 p-4 border-b border-arena-800">
+        <h3 class="text-lg font-bold font-display text-white"><i class="fa-solid fa-users text-amber-400 mr-2"></i>ผู้เล่นทั้งหมด <span id="roster-total" class="text-amber-400">0</span> คน</h3>
+        <input id="roster-search" oninput="renderRosterModal()" placeholder="ค้นหาชื่อ..." autocomplete="off" class="flex-1 max-w-xs bg-arena-950 border border-arena-700 text-sm text-white rounded-lg px-3 py-2" />
+        <button onclick="closeRoster()" class="text-gray-400 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="roster-grid" class="p-4 overflow-y-auto grid gap-2" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))"></div>
     </div>
   </div>
 </body>
