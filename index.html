@@ -189,11 +189,11 @@
 
         <div class="bg-arena-950/70 border border-arena-800 rounded-xl p-3 text-xs text-gray-300 space-y-1">
           <div class="flex items-center text-amber-400 font-bold mb-1">
-            <i class="fa-solid fa-triangle-exclamation mr-1.5"></i> กติกาสูงสุด: 2 ชีวิต (NO REVIVE)
+            <i class="fa-solid fa-triangle-exclamation mr-1.5"></i> กติกา: 2 ชีวิต (ตอบถูกได้หัวใจคืน)
           </div>
-          <p>• ตอบถูก: รักษาชีวิตและสะสมคะแนนตามความไว</p>
+          <p>• ตอบถูก: สะสมคะแนนตามความไว และ <span class="text-emerald-400 font-semibold">ได้หัวใจคืน 1 ดวง</span> (ถ้าข้อก่อนหน้าตอบผิด)</p>
           <p>• ตอบผิด หรือหมดเวลา: <span class="text-red-400 font-semibold">เสีย 1 ชีวิตทันที</span></p>
-          <p>• เสีย 2 ครั้ง: <span class="text-red-500 font-bold">ELIMINATED ตกรอบถาวร!</span></p>
+          <p>• ตอบผิด 2 ข้อติดกัน: <span class="text-red-500 font-bold">ELIMINATED ตกรอบถาวร!</span></p>
         </div>
 
         <button type="submit" class="w-full py-4 rounded-xl font-display font-black text-lg bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 hover:to-yellow-300 text-black shadow-lg shadow-amber-500/20 active:scale-[0.98] transition">
@@ -225,7 +225,7 @@
       <div id="p-eliminated-banner" class="hidden bg-red-950/80 border-2 border-red-600 rounded-2xl p-4 text-center my-3 animate-shake box-glow-danger">
         <div class="text-red-500 text-4xl mb-1"><i class="fa-solid fa-skull-crossbones"></i></div>
         <h3 class="text-xl font-black font-display text-red-400 tracking-widest">YOU ARE ELIMINATED!</h3>
-        <p class="text-xs text-gray-300 mt-1">คุณสูญเสียชีวิตครบ 2 ครั้งแล้ว ตกรอบทันที (ไม่สามารถกดส่งคำตอบได้ แต่ยังคงรับชมเฉลยและเกร็ดความรู้ได้จนจบเกม)</p>
+        <p class="text-xs text-gray-300 mt-1">คุณตอบผิด 2 ข้อติดกัน ตกรอบทันที (ไม่สามารถกดส่งคำตอบได้ แต่ยังคงรับชมเฉลยและเกร็ดความรู้ได้จนจบเกม)</p>
       </div>
 
       <!-- Player Waiting State (Lobby / Before Question) -->
@@ -368,7 +368,7 @@
             </div>
             <div class="space-y-1 text-sm text-gray-300">
               <p><i class="fa-solid fa-heart text-red-500 mr-2"></i>ทุกคนมี <span class="font-bold text-white">2 ชีวิต</span> (ตอบผิดเสีย 1 ชีวิต)</p>
-              <p><i class="fa-solid fa-ban text-red-400 mr-2"></i><span class="font-bold text-red-400">NO REVIVE</span> ตกรอบแล้วหมดสิทธิ์คืนชีพ</p>
+              <p><i class="fa-solid fa-ban text-red-400 mr-2"></i><span class="font-bold text-emerald-400">ตอบถูกได้หัวใจคืน</span> แต่ <span class="font-bold text-red-400">ผิด 2 ข้อติดกัน ตกรอบทันที!</span></p>
               <p><i class="fa-solid fa-trophy text-amber-400 mr-2"></i>ผู้เหลือรอดคนสุดท้ายคือสุดยอดผู้พิทักษ์ประชาธิปไตย</p>
             </div>
           </div>
@@ -1746,10 +1746,10 @@
     // =========================================================================
     const HOWTO_STEPS = [
       { icon: '📱', title: 'สแกน QR แล้วใส่ชื่อ', text: 'ใช้มือถือสแกน QR Code ใส่ชื่อเล่นหรือรหัสนักเรียน แล้วรอครูเริ่มเกม' },
-      { icon: '❤️❤️', title: 'ทุกคนมี 2 หัวใจ', text: 'หัวใจคือชีวิตของเรา พยายามรักษาไว้ให้นานที่สุด' },
+      { icon: '❤️❤️', title: 'ทุกคนมี 2 หัวใจ', text: 'หัวใจคือชีวิตของเรา พยายามรักษาไว้ให้นานที่สุด (มีได้สูงสุด 2 ดวง)' },
       { icon: '⏱️', title: 'อ่านคำถาม แล้วเลือก A B C D', text: 'ตอบให้ทันก่อนเวลาหมด <b class="text-amber-400">เลือกแล้วเปลี่ยนไม่ได้!</b> คิดให้ดีก่อนกด' },
       { icon: '✅', title: 'ตอบถูก = รอด + ได้คะแนน', text: 'ตอบถูกได้ 1,000 คะแนน และ <b class="text-amber-400">ตอบไวยิ่งได้โบนัสเพิ่ม</b>' },
-      { icon: '💔', title: 'ตอบผิด หรือไม่ตอบ = เสีย 1 หัวใจ', text: 'หัวใจหมดทั้ง 2 ดวงคือ <b class="text-red-400">ตกรอบ</b> ตอบไม่ได้แล้ว แต่ยังนั่งดูเกมต่อได้' },
+      { icon: '💔', title: 'ตอบผิด หรือไม่ตอบ = เสีย 1 หัวใจ', text: 'แต่ข้อต่อไป <b class="text-emerald-400">ตอบถูกจะได้หัวใจคืน 1 ดวง!</b> ระวัง <b class="text-red-400">ผิด 2 ข้อติดกัน = ตกรอบ</b> ตอบไม่ได้แล้ว แต่ยังนั่งดูเกมต่อได้' },
       { icon: '🏆', title: 'คนที่รอดจนท้ายสุด ชนะ!', text: 'จัดอันดับ: หัวใจเหลือมากที่สุด → คะแนนมากที่สุด → ใช้เวลารวมน้อยที่สุด' }
     ];
 
@@ -2114,13 +2114,15 @@
           badge.innerHTML = `<i class="fa-solid fa-check"></i>`;
           statusTitle.innerText = "ยอดเยี่ยม! คุณตอบถูกต้อง";
           statusTitle.className = "text-2xl font-black font-display text-emerald-400";
-          lifeMsg.innerText = `รักษาชีวิตไว้ได้ (เหลือ ${player.lives} หัวใจ)`;
+          lifeMsg.innerText = player.lastResult === 'revived'
+            ? `💖 ได้หัวใจคืน 1 ดวง! (กลับมามี ${player.lives} หัวใจ)`
+            : `รักษาชีวิตไว้ได้ (เหลือ ${player.lives} หัวใจ)`;
         } else {
           badge.className = "w-20 h-20 rounded-full mx-auto flex items-center justify-center text-4xl mb-3 shadow-lg bg-red-500/20 text-red-500 border-2 border-red-500";
           badge.innerHTML = `<i class="fa-solid fa-xmark"></i>`;
           statusTitle.innerText = ans ? "น่าเสียดาย! คุณตอบผิด" : "หมดเวลา! คุณไม่ได้ส่งคำตอบ";
           statusTitle.className = "text-2xl font-black font-display text-red-400";
-          lifeMsg.innerText = player.eliminated ? "คุณสูญเสียชีวิตครบ 2 ครั้ง ตกรอบทันที!" : `คุณเสีย 1 ชีวิต (เหลือ ${player.lives} หัวใจ)`;
+          lifeMsg.innerText = player.eliminated ? "คุณตอบผิด 2 ข้อติดกัน ตกรอบทันที!" : `คุณเสีย 1 ชีวิต (เหลือ ${player.lives} หัวใจ) • ข้อหน้าตอบถูกจะได้หัวใจคืน แต่ถ้าผิดอีกตกรอบ!`;
         }
 
         document.getElementById('p-reveal-explanation').innerText = currentQ.explanation;
@@ -2392,6 +2394,8 @@
       let correctCnt = 0;
       let wrongCnt = 0;
       let newlyEliminatedCnt = 0;
+      let revivedCnt = 0;
+      const MAX_LIVES = 2;
 
       // Calculate Lives & Scores for all non-eliminated players
       GameData.players.forEach(p => {
@@ -2400,6 +2404,15 @@
           if (ans && ans.choice === currentQ.correct) {
             // Correct!
             correctCnt++;
+            // ได้หัวใจคืน: ถ้าข้อก่อนหน้าตอบผิด (wrongStreak > 0) และหัวใจยังไม่เต็ม
+            if ((p.wrongStreak || 0) > 0 && p.lives < MAX_LIVES) {
+              p.lives += 1;
+              p.lastResult = 'revived';
+              revivedCnt++;
+            } else {
+              p.lastResult = 'correct';
+            }
+            p.wrongStreak = 0;
             // Score formula: 1000 base + speed bonus
             const speedBonus = Math.max(0, Math.floor((GameData.totalTime - ans.timeTaken) * 20));
             p.score += (1000 + speedBonus);
@@ -2408,10 +2421,14 @@
             // Wrong or Timed out -> Lose 1 Life!
             wrongCnt++;
             p.lives -= 1;
+            p.wrongStreak = (p.wrongStreak || 0) + 1;
             p.totalTimeTaken += GameData.totalTime;
-            if (p.lives <= 0) {
+            p.lastResult = 'wrong';
+            // ตอบผิดติดกัน 2 ครั้ง หรือหัวใจหมด = ตกรอบ
+            if (p.wrongStreak >= 2 || p.lives <= 0) {
               p.lives = 0;
               p.eliminated = true;
+              p.lastResult = 'eliminated';
               newlyEliminatedCnt++;
             }
           }
@@ -2421,7 +2438,8 @@
       GameData.roundStats = {
         correct: correctCnt,
         wrong: wrongCnt,
-        eliminated: newlyEliminatedCnt
+        eliminated: newlyEliminatedCnt,
+        revived: revivedCnt
       };
 
       if (newlyEliminatedCnt > 0) {
@@ -2431,7 +2449,7 @@
       }
 
       broadcastState();
-      showToast(`เฉลยข้อที่ ${GameData.currentQIndex + 1}: ผู้รอดชีวิต ${GameData.players.filter(p => !p.eliminated).length} คน`);
+      showToast(`เฉลยข้อที่ ${GameData.currentQIndex + 1}: ผู้รอดชีวิต ${GameData.players.filter(p => !p.eliminated).length} คน` + (revivedCnt > 0 ? ` • ได้หัวใจคืน ${revivedCnt} คน` : ''));
     }
 
     function adminNextQuestion() {
@@ -2466,6 +2484,8 @@
       GameData.players.forEach(p => {
         p.lives = 2;
         p.eliminated = false;
+        p.wrongStreak = 0;
+        p.lastResult = null;
         p.answers = {};
         p.score = 0;
         p.totalTimeTaken = 0;
