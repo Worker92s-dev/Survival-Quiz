@@ -328,7 +328,7 @@
       <div class="bg-amber-950/60 border border-amber-500/50 rounded-2xl p-3 md:p-4 text-center">
         <div class="text-[11px] md:text-xs uppercase font-bold text-amber-400">เหลือ 1 ชีวิต (CRITICAL)</div>
         <div id="proj-stat-danger" class="font-display font-black text-2xl md:text-4xl text-amber-400 text-glow-gold">0</div>
-        <div class="text-[10px] text-amber-300">ผิดอีกครั้งตกรอบทันที</div>
+        <div class="text-[10px] text-amber-300">ผิดอีกข้อตกรอบทันที • ถูกได้หัวใจคืน</div>
       </div>
       <!-- Eliminated -->
       <div class="bg-red-950/60 border border-red-500/50 rounded-2xl p-3 md:p-4 text-center">
@@ -368,7 +368,8 @@
             </div>
             <div class="space-y-1 text-sm text-gray-300">
               <p><i class="fa-solid fa-heart text-red-500 mr-2"></i>ทุกคนมี <span class="font-bold text-white">2 ชีวิต</span> (ตอบผิดเสีย 1 ชีวิต)</p>
-              <p><i class="fa-solid fa-ban text-red-400 mr-2"></i><span class="font-bold text-emerald-400">ตอบถูกได้หัวใจคืน</span> แต่ <span class="font-bold text-red-400">ผิด 2 ข้อติดกัน ตกรอบทันที!</span></p>
+              <p><i class="fa-solid fa-heart-circle-plus text-emerald-400 mr-2"></i>ข้อถัดไป<span class="font-bold text-emerald-400">ตอบถูก = ได้หัวใจคืน 1 ดวง</span></p>
+              <p><i class="fa-solid fa-skull text-red-400 mr-2"></i><span class="font-bold text-red-400">ตอบผิด 2 ข้อติดกัน = ตกรอบทันที!</span></p>
               <p><i class="fa-solid fa-trophy text-amber-400 mr-2"></i>ผู้เหลือรอดคนสุดท้ายคือสุดยอดผู้พิทักษ์ประชาธิปไตย</p>
             </div>
           </div>
@@ -1749,7 +1750,9 @@
       { icon: '❤️❤️', title: 'ทุกคนมี 2 หัวใจ', text: 'หัวใจคือชีวิตของเรา พยายามรักษาไว้ให้นานที่สุด (มีได้สูงสุด 2 ดวง)' },
       { icon: '⏱️', title: 'อ่านคำถาม แล้วเลือก A B C D', text: 'ตอบให้ทันก่อนเวลาหมด <b class="text-amber-400">เลือกแล้วเปลี่ยนไม่ได้!</b> คิดให้ดีก่อนกด' },
       { icon: '✅', title: 'ตอบถูก = รอด + ได้คะแนน', text: 'ตอบถูกได้ 1,000 คะแนน และ <b class="text-amber-400">ตอบไวยิ่งได้โบนัสเพิ่ม</b>' },
-      { icon: '💔', title: 'ตอบผิด หรือไม่ตอบ = เสีย 1 หัวใจ', text: 'แต่ข้อต่อไป <b class="text-emerald-400">ตอบถูกจะได้หัวใจคืน 1 ดวง!</b> ระวัง <b class="text-red-400">ผิด 2 ข้อติดกัน = ตกรอบ</b> ตอบไม่ได้แล้ว แต่ยังนั่งดูเกมต่อได้' },
+      { icon: '💔', title: 'ตอบผิด หรือไม่ตอบ = เสีย 1 หัวใจ', text: 'ตอบผิด หรือหมดเวลาโดยไม่ได้เลือก จะเสียหัวใจไป 1 ดวงทันที' },
+      { icon: '💖', title: 'ข้อถัดไปตอบถูก = ได้หัวใจคืน!', text: 'ถ้าเพิ่งเสียหัวใจไป แล้ว <b class="text-emerald-400">ข้อต่อไปตอบถูก จะได้หัวใจคืน 1 ดวง</b> กลับมาเต็ม 2 ดวงอีกครั้ง' },
+      { icon: '☠️', title: 'ผิด 2 ข้อติดกัน = ตกรอบ', text: 'ถ้าตอบผิดหรือไม่ตอบ <b class="text-red-400">2 ข้อติดกัน</b> จะ<b class="text-red-400">ตกรอบทันที</b> ตอบไม่ได้แล้ว แต่ยังนั่งดูเกมต่อได้' },
       { icon: '🏆', title: 'คนที่รอดจนท้ายสุด ชนะ!', text: 'จัดอันดับ: หัวใจเหลือมากที่สุด → คะแนนมากที่สุด → ใช้เวลารวมน้อยที่สุด' }
     ];
 
